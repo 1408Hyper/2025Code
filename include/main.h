@@ -36,6 +36,58 @@
 
 #include "api.h"
 
+// Includes
+//#include "okapi/api.hpp"
+// Vectors to contain data
+#include <vector>
+// Strings for better char arrays
+#include <string>
+// Intializer lists
+#include <initializer_list>
+// Streams for better IO
+#include <sstream>
+// Memory management
+#include <memory>
+// Perfect forwarding
+#include <utility>
+// Function args
+#include <functional>
+// Types
+#include <type_traits>
+// Math
+#include <cmath>
+// Clamping
+#include <algorithm>
+// Error numbers
+#include <cerrno>
+// Standard library
+#include <cstdlib>
+// Mapping dictionary
+#include <map>
+// Numbers
+#include <numeric>
+// Execution
+#include <execution>
+
+// TODO: Refactor our code into different files--main.cpp is getting too big
+
+// Using declarations to shorten common types
+using std::vector;
+using std::string;
+using std::map;
+
+using std::unique_ptr;
+using std::shared_ptr;
+
+// Shorthands for port types & other type aliases
+using MGPorts = vector<std::int8_t>;
+using AnalogPort = char;
+
+using VoidFunc = std::function<void()>;
+using VoidFuncVector = vector<VoidFunc>;
+
+#include "options.h"
+
 /**
  * You should add more #includes here
  */
