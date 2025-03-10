@@ -62,12 +62,16 @@
 #include <cerrno>
 // Standard library
 #include <cstdlib>
+// Integers
+#include <cstdint>
 // Mapping dictionary
 #include <map>
 // Numbers
 #include <numeric>
 // Execution
 #include <execution>
+// Formatting
+#include <format>
 
 // TODO: Refactor our code into different files--main.cpp is getting too big
 

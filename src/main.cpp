@@ -24,32 +24,112 @@
 
 /// @brief Hyper namespace for all custom classes and functions
 namespace hyper {
-	// Function declarations
+	// Helper functions
+
+	/// @brief Convert vector of ints to string. For displaying on the LCD/debugging
+	/// @param vec Vector to convert
+	/// @param delimiter Delimiter to separate elements
 	template <typename T>
-	string vectorToString(vector<T>& vec, string delimiter = ", ");
+	string vectorToString(vector<T>& vec, string delimiter) {
+		int vecSize = vec.size();
+		int vecSizeMinusOne = vecSize - 1;
+		std::ostringstream oss;
 
-	std::int32_t prepareMoveVoltage(float raw);
+		oss << "{";
+		for (int i = 0; i < vecSize; i++) {
+			oss << vec[i];
+			if (i < vecSizeMinusOne) {
+				oss << delimiter;
+			}
+		}
+		oss << "}";
 
+		return oss.str();
+	}
+
+	/// @brief Assert that a value is arithmetic
+	/// @param val Value to assert
 	template <typename T>
-	bool isNumBetween(T num, T min, T max);
+	void assertArithmetic(const T val) {
+		static_assert(std::is_arithmetic<T>::value, "Value must be arithmetic");
+	}
 
+	/// @brief Checks whether a given color channel is within tolerance.
+	/// @param channel Color to check
+	/// @param target Target colour which the colour should be
+	/// @return Whether the channel is within tolerance
+	bool channelWithinTolerance(const float& channel, const float& target, const float& tolerance = 5) {
+		return std::fabs(channel - target) <= tolerance;
+	}
+
+	std::int32_t prepareMoveSpeed(float raw) {
+		// Round the number to the nearest integer
+		raw = std::round(raw);
+
+		std::int32_t speed = static_cast<std::int32_t>(raw);
+		speed = std::clamp(speed, MotorBounds::MOVE_MIN, MotorBounds::MOVE_MAX);
+
+		return speed;
+	}
+
+	/// @brief Assert that a number is between two values
+	/// @param num Number to assert
+	/// @param min Minimum value
+	/// @param max Maximum value
 	template <typename T>
-	T normaliseAngle(T angle);
+	bool isNumBetween(T num, T min, T max) {
+		return ((num >= min) && (num <= max));
+	}
 
+	/// @brief Normalise an angle to the range [-180, 180]
+	/// @param angle Angle to normalise
 	template <typename T>
-	T naiveNormaliseAngle(T angle);
+	T normaliseAngle(T angle) {
+		assertArithmetic(angle);
 
-	/*template <typename T>
-	vector<T> getAllValues() {}
+		if (angle > 180) {
+			angle -= 360;
+		} else if (angle < -180) {
+			angle += 360;
+		}
 
-	template <typename E, typename V>
-	void fillMapWithEnum(map<E, V>& map) {}*/
-	
+		return angle;
+	}
+
+	/// @brief Naively normalise an angle to the range [-180, 180] by simply clamping the value
+	/// @param angle Angle to normalise
 	template <typename T>
-	T calcMeanFromVector(const vector<T>& vec);
+	T naiveNormaliseAngle(T angle) {
+		assertArithmetic(angle);
 
+		angle = std::clamp(angle, -180.0, 180.0);
+
+		return angle;
+	}
+
+	/// @brief Calculate the mean of a vector
+	/// @param vec Vector to calculate the mean of
+	/// @param size Size of the vector
+	/// @return Mean of the vector (type T)
 	template <typename T>
-	T calcMeanFromVector(const vector<T>& vec, int size);
+	T calcMeanFromVector(const vector<T>& vec, int size) {
+		T sum = std::accumulate(vec.begin(), vec.end(), 0);
+		T mean = sum / size;
+
+		return mean;
+	}
+
+	/// @brief Calculate the mean of a vector
+	/// @param vec Vector to calculate the mean of
+	/// @return Mean of the vector (type T)
+	template <typename T>
+	T calcMeanFromVector(const vector<T>& vec) {
+		int size = vec.size();
+		T sum = std::accumulate(vec.begin(), vec.end(), 0);
+		T mean = sum / size;
+
+		return mean;
+	}
 
 	// Structs
 
@@ -78,12 +158,7 @@ namespace hyper {
 		pros::Controller master{pros::E_CONTROLLER_MASTER};
 	public:
 		/// @brief Creates abstract chassis object
-		AbstractChassis() {
-																																																																													// :) u know what this does
-																																																																													#ifndef _HYPER_UNLOCK_66_75_63_6B
-																																																																														_HYPER_UNLEASH_HELL
-																																																																													#endif
-		};
+		AbstractChassis() {};
 
 		virtual ~AbstractChassis() = default;
 
@@ -121,12 +196,7 @@ namespace hyper {
 		/// @param args Args AbstractComponent object (check args struct for more info)
 		AbstractComponent(AbstractComponentArgs args) : 
 		chassis(args.chassis),
-		master(&args.chassis->getController()) {
-			// :) u know what this does
-																																																																																		#ifndef _HYPER_UNLOCK_66_75_63_6B
-																																																																																			_HYPER_UNLEASH_HELL
-																																																																																		#endif
-		};
+		master(&args.chassis->getController()) {};
 
 		/// @brief Log something to the brain safely
 		/// @param line Line to print the message on (check class consts for max lines)
@@ -468,7 +538,115 @@ namespace hyper {
 		}
 	}; // class BiToggle
 
-	/// @brief Class for driver control
+	/// @brief Class to control autonomous PID routines for driving
+	class DrivePID {
+	private:
+	protected:
+	public:
+	};
+
+	/// @brief Class to manage drivetrain operator control
+	class DriveControl : public AbstractComponent {
+	public:
+		/// @brief Struct for output move speeds to be used with mg.move()
+		/// @param left Speed for left motor group (can be mapped directly to mg.move())
+		/// @param right Speed for right motor group (can be mapped directly to mg.move())
+		struct OutputMoveSpeeds {
+			float left;
+			float right;
+		};
+
+		enum class DriveControlMode {
+			ARCADE,
+			TANK
+		};
+
+		std::function<OutputMoveSpeeds()> driveControl;
+
+		DriveControlMode driveControlMode;
+
+		/// @brief Args for DriveControl object
+		/// @param abstractComponentArgs Args for AbstractComponent object
+		struct DriveControlArgs {
+			AbstractComponentArgs abstractComponentArgs;
+		};
+	private:
+		void bindDriveControl(void (DriveControl::*driveFunc)()) {
+			driveControl = std::bind(driveFunc, this);
+		}
+
+		OutputMoveSpeeds arcadeControl() {
+			float lateral = master->get_analog(ANALOG_LEFT_Y);    // Gets amount forward/backward from left joystick
+			float turn = master->get_analog(ANALOG_RIGHT_X);  // Gets the turn left/right from right joystick
+
+			prepareArcadeLateral(lateral);
+
+			TurnCoefficients turnCoeffs = calculateArcadeTurns(turn, lateral);
+			
+			pros::lcd::print(1, ("T, L:" + std::to_string(turn) + ", " + std::to_string(lateral)).c_str());
+
+			// Calculate speeds
+			lateral *= driveControlSpeed.getForwardBackSpeed();
+
+			turnCoeffs.left *= driveControlSpeed.turnSpeed;
+			turnCoeffs.right *= driveControlSpeed.turnSpeed;
+
+			// Ensure voltages are within correct ranges
+			float left_speed = lateral - turnCoeffs.left;
+			float right_speed = lateral + turnCoeffs.right;
+
+			pros::lcd::print(2, ("L/R COEF: " + std::to_string(turnCoeffs.left) + ", " + std::to_string(turnCoeffs.right)).c_str());
+			pros::lcd::print(7, ("LEFT/RIGHT: " + std::to_string(left_speed) + ", " + std::to_string(right_speed)).c_str());
+
+			return {left_voltage, right_voltage};
+		}
+
+		OutputMoveSpeeds tankControl() {
+			float left = master->get_analog(ANALOG_LEFT_Y);
+			float right = master->get_analog(ANALOG_RIGHT_Y);
+
+			return {left, right};
+		}
+
+		OutputMoveSpeeds fallbackControl() {
+			return tankControl();
+		}
+
+		// REMEMBER: preparing the move speed must be done in Drivetrain class, NOT in DriveControl class
+	public:
+		/// @brief Sets the driver control mode
+		/// @param mode Mode to set the driver control to
+		void setDriveControlMode(DriveControlMode mode = DriveControlMode::TANK) {
+			driveControlMode = mode;
+
+			switch (driveControlMode) {
+				case DriveControlMode::ARCADE:
+					bindDriveControl(&DriveControl::arcadeControl);
+					break;
+				case DriveControlMode::TANK:
+					bindDriveControl(&DriveControl::tankControl);
+					break;
+				default:
+					bindDriveControl(&DriveControl::fallbackControl);
+					break;
+			}
+		}
+
+		/// @brief Creates DriveControl object
+		/// @param args Args for DriveControl object (check args struct for more info)
+		DriveControl(DriveControlArgs args) : 
+			AbstractComponent(args.abstractComponentArgs) {
+				setDriveControlMode();
+			};
+
+		void opControl() override {
+
+		}
+	protected:
+	private:
+	};
+
+	/// @brief Class for drivetrain management
 	class Drivetrain : public AbstractComponent {
 	public:
 		/// @brief Enum for different driver control modes
@@ -485,6 +663,7 @@ namespace hyper {
 
 		pros::MotorGroup left_mg;
 		pros::MotorGroup right_mg;
+
 		int leftMgSize;
 		int rightMgSize;
 
@@ -657,17 +836,9 @@ namespace hyper {
 			}
 
 			if (turn > 0) { // Turning to right so we decrease the left MG
-				if (lateral < 0) {
-					turnCoeffs.left -= turnDecrease;
-				} else {
-					turnCoeffs.left += turnDecrease;
-				}
+				turnCoeffs.left += (lateral < 0) ? -turnDecrease : turnDecrease;
 			} else { // Turning to left so we decrease the right MG
-				if (lateral > 0) {
-					turnCoeffs.right -= turnDecrease;
-				} else {
-					turnCoeffs.right += turnDecrease;
-				}
+				turnCoeffs.right += (lateral > 0) ? -turnDecrease : turnDecrease;
 			}
 
 			pros::lcd::print(6, ("TD, dAS:, lComp: " + std::to_string(turnDecrease) + ", " + std::to_string(dynamicArcSpeed) + ", " + std::to_string(lateralCompensation)).c_str());
@@ -1294,141 +1465,6 @@ namespace hyper {
 			cm.postAuton();
 		}
 	}; // class Chassis
-
-	/// @brief Convert vector of ints to string. For displaying on the LCD/debugging
-	/// @param vec Vector to convert
-	/// @param delimiter Delimiter to separate elements
-	template <typename T>
-	string vectorToString(vector<T>& vec, string delimiter) {
-		int vecSize = vec.size();
-		int vecSizeMinusOne = vecSize - 1;
-		std::ostringstream oss;
-
-		oss << "{";
-		for (int i = 0; i < vecSize; i++) {
-			oss << vec[i];
-			if (i < vecSizeMinusOne) {
-				oss << delimiter;
-			}
-		}
-		oss << "}";
-
-		return oss.str();
-	}
-
-	/// @brief Assert that a value is arithmetic
-	/// @param val Value to assert
-	template <typename T>
-	void assertArithmetic(const T val) {
-		static_assert(std::is_arithmetic<T>::value, "Value must be arithmetic");
-	}
-
-	/// @brief Checks whether a given color channel is within tolerance.
-	/// @param channel Color to check
-	/// @param target Target colour which the colour should be
-	/// @return Whether the channel is within tolerance
-	bool channelWithinTolerance(const float& channel, const float& target, const float& tolerance = 5) {
-		return std::fabs(channel - target) <= tolerance;
-	}
-
-	std::int32_t prepareMoveVoltage(float raw) {
-		// Round the number to the nearest integer
-		raw = std::round(raw);
-
-		std::int32_t voltage = static_cast<std::int32_t>(raw);
-		voltage = std::clamp(voltage, MotorBounds::MOVE_MIN, MotorBounds::MOVE_MAX);
-
-		return voltage;
-	}
-
-	/// @brief Assert that a number is between two values
-	/// @param num Number to assert
-	/// @param min Minimum value
-	/// @param max Maximum value
-	template <typename T>
-	bool isNumBetween(T num, T min, T max) {
-		assertArithmetic(num);
-
-		return ((num >= min) && (num <= max));
-	}
-
-	/// @brief Normalise an angle to the range [-180, 180]
-	/// @param angle Angle to normalise
-	template <typename T>
-	T normaliseAngle(T angle) {
-		assertArithmetic(angle);
-
-		if (angle > 180) {
-			angle -= 360;
-		} else if (angle < -180) {
-			angle += 360;
-		}
-
-		return angle;
-	}
-
-	/// @brief Naively normalise an angle to the range [-180, 180] by simply clamping the value
-	/// @param angle Angle to normalise
-	template <typename T>
-	T naiveNormaliseAngle(T angle) {
-		assertArithmetic(angle);
-
-		angle = std::clamp(angle, -180.0, 180.0);
-
-		return angle;
-	}
-
-	/// @brief Calculate the mean of a vector
-	/// @param vec Vector to calculate the mean of
-	/// @param size Size of the vector
-	/// @return Mean of the vector (type T)
-	template <typename T>
-	T calcMeanFromVector(const vector<T>& vec, int size) {
-		T sum = std::accumulate(vec.begin(), vec.end(), 0);
-		T mean = sum / size;
-
-		return mean;
-	}
-
-	/// @brief Calculate the mean of a vector
-	/// @param vec Vector to calculate the mean of
-	/// @return Mean of the vector (type T)
-	template <typename T>
-	T calcMeanFromVector(const vector<T>& vec) {
-		int size = vec.size();
-		T sum = std::accumulate(vec.begin(), vec.end(), 0);
-		T mean = sum / size;
-
-		return mean;
-	}
-
-	/*/// @brief Get all the values of an enum class into a vector
-	template <typename T>
-	vector<T> getAllValues() {
-		vector<T> values;
-		constexpr int max = static_cast<int>(T::_MAX);
-		values.reserve(max);
-
-		for (int i = 0; i < max; i++) {
-			values.push_back(static_cast<T>(i));
-		}
-
-		return values;
-	}
-
-	/// @brief Fill a map with default values for an enum class (see below function def for example use case)
-	/// @param map Map to fill
-	template <typename E, typename V>
-	void fillMapWithEnum(map<E, V>& map) {
-		vector<E> values = getAllValues<E>();
-		E defaultValue = V();
-
-		for (E value : values) {
-			map[value] = defaultValue;
-		}
-	}*/
-	// example use case
-	//fillMapWithEnum<pros::controller_digital_e_t, bool>(map);
 } // namespace hyper
 
 // Global variables
