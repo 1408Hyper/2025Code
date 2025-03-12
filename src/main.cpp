@@ -144,8 +144,12 @@ namespace hyper {
 
 	/// @brief Struct for motor move bounds
 	struct MotorBounds {
+		static constexpr float SCALE_MIN = 0;
+		static constexpr float SCALE_MAX = 1;
+
 		static constexpr std::int32_t MOVE_MIN = -127;
 		static constexpr std::int32_t MOVE_MAX = 127;
+
 		static constexpr std::int32_t MILLIVOLT_MAX = 12000;
 	};
 
@@ -538,44 +542,202 @@ namespace hyper {
 		}
 	}; // class BiToggle
 
+	/// @brief Struct for drivetrain motor groups
+	/// @param left Left motor group
+	/// @param right Right motor group
+	struct DriveMGs {
+		pros::MotorGroup left;
+		pros::MotorGroup right;
+	};
+
 	/// @brief Class to control autonomous PID routines for driving
 	class DrivePID {
 	private:
+		DriveMGs* mgs;
 	protected:
 	public:
-	};
+		struct DrivePIDArgs {
+			DriveMGs* mgs;
+		};
+
+		DrivePID(DrivePIDArgs args) : 
+			mgs(args.mgs) {};
+
+		// TODO: Implement PID functions (and copy over legacy code)
+
+		// New unified PID movement function (under development)
+		void move() {
+
+		}
+
+		// Legacy only lateral movement with PID
+		void lateral() {
+
+		}
+
+		// Legacy only turning with PID
+		void turn() {
+
+		}
+	}; // class DrivePID
 
 	/// @brief Class to manage drivetrain operator control
 	class DriveControl : public AbstractComponent {
 	public:
-		/// @brief Struct for output move speeds to be used with mg.move()
-		/// @param left Speed for left motor group (can be mapped directly to mg.move())
-		/// @param right Speed for right motor group (can be mapped directly to mg.move())
-		struct OutputMoveSpeeds {
+		/// @brief Base struct for any values on the horizontal axis
+		/// @param left Left side value
+		/// @param right Right side value
+		struct Horizontal {
 			float left;
 			float right;
 		};
 
 		enum class DriveControlMode {
 			ARCADE,
-			TANK
+			TANK,
+			ATAC
 		};
 
-		std::function<OutputMoveSpeeds()> driveControl;
+		std::function<Horizontal()> driveControl;
 
 		DriveControlMode driveControlMode;
+
+		DriveMGs* mgs;
 
 		/// @brief Args for DriveControl object
 		/// @param abstractComponentArgs Args for AbstractComponent object
 		struct DriveControlArgs {
 			AbstractComponentArgs abstractComponentArgs;
+			DriveMGs* mgs;
 		};
+
+		/// @brief Struct for different driver control speeds on arcade control
+		/// @param turnSpeed Multiplier for only turning
+		/// @param forwardBackSpeed Multiplier for only forward/backward
+		/// @param arcSpeed Multiplier of opposite turn for when turning and moving laterally at the same time
+		// (higher value means less lateral movement)
+		struct ArcadeControlSpeed {
+		private:
+			float forwardBackSpeed;
+			float maxLateral;
+		public:
+			static constexpr float controllerMax = 127;
+
+			float turnSpeed;
+			float arcSpeed;
+
+			/// @brief Sets the forward/backward speed
+			/// @param speed Speed to set the forward/backward speed to
+			// (Also prepares maxLateral for arc movement)
+			void setForwardBackSpeed(float speed, float maxTolerance = 1) {
+				forwardBackSpeed = speed;
+				maxLateral = speed * controllerMax + maxTolerance;
+			}
+
+			/// @brief Gets the forward/backward speed
+			/// @return Forward/backward speed
+			float getForwardBackSpeed() {
+				return forwardBackSpeed;
+			}
+
+			/// @brief Gets the max lateral movement
+			/// @return Max lateral movement
+			float getMaxLateral() {
+				return maxLateral;
+			}
+
+			// lower arc speed is lower turning
+
+			ArcadeControlSpeed(float turnSpeed = 1, float forwardBackSpeed = 1, float arcSpeed = 0.7) :
+				turnSpeed(turnSpeed), 
+				arcSpeed(arcSpeed) {
+					setForwardBackSpeed(forwardBackSpeed);
+			}
+		};
+
+		ArcadeControlSpeed arcadeSpeed = {};
+
+		// Base struct for vertical values
+		struct Vertical {
+			float low;
+			float high;
+		};
+
+		/// @brief Sigmoid for tank control on single side
+		/// @param estimate Amount to estimate (linearly interpolate or extrapolate) between sigmoid and linear speeds
+		/// @param extremas Multiplier of individual extremas (layered on top of the sigmoid estimation coefficient)
+		/// @param dynamic Recalculate sigmoid curve to fit low and high deadbands
+		struct TankSigmoid {
+			float estimate = 1.0;
+			Vertical extremas = {1.0, 1.0};
+			bool dynamic = true;
+		};
+
+		/// @brief Speed for tank control on single side
+		/// @param base Base speed for the side
+		/// @param deadbands Absolute deadbands for the side
+		struct TankSpeed {
+			float base = 1.0;
+			Vertical deadbands = {0.0, 1.0};
+			TankSigmoid sigmoid = {};
+		};
+
+		// Tank speeds for left and right sides
+		TankSpeed tankSpeeds[2] = {{}, {}};
 	private:
-		void bindDriveControl(void (DriveControl::*driveFunc)()) {
+		// Coefficients for turning in driver control
+		struct TurnCoefficients {
+			float left;
+			float right;
+		};
+
+		void bindDriveControl(Horizontal (DriveControl::*driveFunc)()) {
 			driveControl = std::bind(driveFunc, this);
 		}
 
-		OutputMoveSpeeds arcadeControl() {
+		void prepareArcadeLateral(float& lateral) {
+			// Change to negative to invert
+			lateral *= -1;
+		}
+
+		// Calculate the movement of the robot when turning and moving laterally at the same time
+		void calculateArcMovement(TurnCoefficients& turnCoeffs, float lateral, float turn, float maxLateralTolerance = 1, float arcDeadband = 30) {
+			if (std::fabs(lateral) < arcDeadband) {
+				return;
+			}
+
+			// 0-1 range of percentage of lateral movement against max possible lateral movement
+			float lateralCompensation = lateral / arcadeSpeed.getMaxLateral();
+			// Decrease the turn speed when moving laterally (higher turn should be higher turnDecrease)
+			float dynamicArcSpeed = (lateral < 0) ? arcadeSpeed.arcSpeed : 1;
+
+			float turnDecrease = 1 * turn * lateralCompensation * dynamicArcSpeed;
+
+			if (lateral > 0) {
+				turnDecrease *= turn * 0.0001;
+			}
+
+			if (turn > 0) { // Turning to right so we decrease the left MG
+				turnCoeffs.left += (lateral < 0) ? -turnDecrease : turnDecrease;
+			} else { // Turning to left so we decrease the right MG
+				turnCoeffs.right += (lateral > 0) ? -turnDecrease : turnDecrease;
+			}
+
+			pros::lcd::print(6, ("TD, dAS:, lComp: " + std::to_string(turnDecrease) + ", " + std::to_string(dynamicArcSpeed) + ", " + std::to_string(lateralCompensation)).c_str());
+		}
+
+		TurnCoefficients calculateArcadeTurns(float turn, float lateral) {
+			turn *= 1;
+
+			TurnCoefficients turnCoeffs = {turn, turn};
+
+			// Allow for arc movement
+			calculateArcMovement(turnCoeffs, lateral, turn);
+
+			return turnCoeffs;
+		}
+
+		Horizontal arcadeControl() {
 			float lateral = master->get_analog(ANALOG_LEFT_Y);    // Gets amount forward/backward from left joystick
 			float turn = master->get_analog(ANALOG_RIGHT_X);  // Gets the turn left/right from right joystick
 
@@ -586,10 +748,10 @@ namespace hyper {
 			pros::lcd::print(1, ("T, L:" + std::to_string(turn) + ", " + std::to_string(lateral)).c_str());
 
 			// Calculate speeds
-			lateral *= driveControlSpeed.getForwardBackSpeed();
+			lateral *= arcadeSpeed.getForwardBackSpeed();
 
-			turnCoeffs.left *= driveControlSpeed.turnSpeed;
-			turnCoeffs.right *= driveControlSpeed.turnSpeed;
+			turnCoeffs.left *= arcadeSpeed.turnSpeed;
+			turnCoeffs.right *= arcadeSpeed.turnSpeed;
 
 			// Ensure voltages are within correct ranges
 			float left_speed = lateral - turnCoeffs.left;
@@ -598,17 +760,65 @@ namespace hyper {
 			pros::lcd::print(2, ("L/R COEF: " + std::to_string(turnCoeffs.left) + ", " + std::to_string(turnCoeffs.right)).c_str());
 			pros::lcd::print(7, ("LEFT/RIGHT: " + std::to_string(left_speed) + ", " + std::to_string(right_speed)).c_str());
 
-			return {left_voltage, right_voltage};
+			return {left_speed, right_speed};
 		}
 
-		OutputMoveSpeeds tankControl() {
-			float left = master->get_analog(ANALOG_LEFT_Y);
-			float right = master->get_analog(ANALOG_RIGHT_Y);
+		// Basic tank control
+		Horizontal tankControl() {
+			float left = master->get_analog(ANALOG_LEFT_Y) * tankSpeeds[0].base;
+			float right = master->get_analog(ANALOG_RIGHT_Y) * tankSpeeds[1].base;
 
 			return {left, right};
 		}
 
-		OutputMoveSpeeds fallbackControl() {
+		float atacSigmoid(float speed, const TankSigmoid& sigmoid) {
+			
+
+			return speed;
+		}
+
+		// ATAC on individual axis (ran for each axis)
+		float atacAxis(float speed, const TankSpeed& tankSpeed) {
+			// Process deadbands
+			if (speed < tankSpeed.deadbands.low) {
+				return 0;
+			} else if (speed > tankSpeed.deadbands.high) {
+				return tankSpeed.deadbands.high;
+			}
+
+			speed *= tankSpeed.base;
+
+			speed = atacSigmoid(speed, tankSpeed.sigmoid);
+
+			return speed;
+		}
+
+		// Advanced Tank Action Control: Implementing all features we've ever wanted
+		Horizontal atac() {
+			float speeds[2] = {
+				master->get_analog(ANALOG_LEFT_Y),
+				master->get_analog(ANALOG_RIGHT_Y)
+			};
+		
+			int index = 0;
+			for (float& speed : speeds) {
+				// Rescale to -1 to 1 value
+				speed /= MotorBounds::MOVE_MAX;
+
+				// Process speed on one axis
+				speed = atacAxis(speed, tankSpeeds[index]);
+
+				// Rescale to -127 to 127 value
+				speed *= MotorBounds::MOVE_MAX;
+
+				index++;
+			}
+
+			return {speeds[0], speeds[1]};
+		}
+
+		// Final fallback driver control to default back to final working mode
+		Horizontal fallbackControl() {
 			return tankControl();
 		}
 
@@ -626,6 +836,8 @@ namespace hyper {
 				case DriveControlMode::TANK:
 					bindDriveControl(&DriveControl::tankControl);
 					break;
+				case DriveControlMode::ATAC:
+					bindDriveControl(&DriveControl::atac);
 				default:
 					bindDriveControl(&DriveControl::fallbackControl);
 					break;
@@ -635,16 +847,18 @@ namespace hyper {
 		/// @brief Creates DriveControl object
 		/// @param args Args for DriveControl object (check args struct for more info)
 		DriveControl(DriveControlArgs args) : 
-			AbstractComponent(args.abstractComponentArgs) {
+			AbstractComponent(args.abstractComponentArgs),
+			mgs(args.mgs) {
 				setDriveControlMode();
 			};
 
 		void opControl() override {
+			Horizontal speeds = driveControl();
 
+			mgs->left.move(prepareMoveSpeed(speeds.left));
+			mgs->right.move(prepareMoveSpeed(speeds.right));
 		}
-	protected:
-	private:
-	};
+	}; // class DriveControl
 
 	/// @brief Class for drivetrain management
 	class Drivetrain : public AbstractComponent {
@@ -655,12 +869,6 @@ namespace hyper {
 			TANK
 		};
 	private:
-		// Coefficients for turning in driver control
-		struct TurnCoefficients {
-			float left;
-			float right;
-		};
-
 		pros::MotorGroup left_mg;
 		pros::MotorGroup right_mg;
 

@@ -72,6 +72,16 @@
 #include <execution>
 // Formatting
 #include <format>
+// Array
+#include <array>
+// Tuple
+#include <tuple>
+// Queue
+#include <queue>
+// Stack
+#include <stack>
+// List
+#include <list>
 
 // TODO: Refactor our code into different files--main.cpp is getting too big
 
