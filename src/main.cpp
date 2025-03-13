@@ -670,7 +670,6 @@ namespace hyper {
 		struct TankSigmoid {
 			float estimate = 1.0;
 			Vertical extremas = {1.0, 1.0};
-			bool dynamic = true;
 		};
 
 		/// @brief Speed for tank control on single side
@@ -678,7 +677,7 @@ namespace hyper {
 		/// @param deadbands Absolute deadbands for the side
 		struct TankSpeed {
 			float base = 1.0;
-			Vertical deadbands = {0.0, 1.0};
+			float deadband = 0.0;
 			TankSigmoid sigmoid = {};
 		};
 
@@ -772,7 +771,11 @@ namespace hyper {
 		}
 
 		float atacSigmoid(float speed, const TankSigmoid& sigmoid) {
-			
+			if (speed < 0.5) {
+				speed = 0.5 * std::pow(2 * speed, sigmoid.extremas.low);
+			} else {
+				speed = 1 - 0.5 * std::pow(2 - (2 * speed), sigmoid.extremas.high);
+			}
 
 			return speed;
 		}
@@ -780,10 +783,8 @@ namespace hyper {
 		// ATAC on individual axis (ran for each axis)
 		float atacAxis(float speed, const TankSpeed& tankSpeed) {
 			// Process deadbands
-			if (speed < tankSpeed.deadbands.low) {
+			if (speed < tankSpeed.deadband) {
 				return 0;
-			} else if (speed > tankSpeed.deadbands.high) {
-				return tankSpeed.deadbands.high;
 			}
 
 			speed *= tankSpeed.base;
