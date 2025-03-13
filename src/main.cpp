@@ -554,14 +554,22 @@ namespace hyper {
 	class DrivePID {
 	private:
 		DriveMGs* mgs;
+
+		pros::IMU imu;
 	protected:
 	public:
 		struct DrivePIDArgs {
 			DriveMGs* mgs;
+			std::int8_t imuPort;
 		};
 
 		DrivePID(DrivePIDArgs args) : 
-			mgs(args.mgs) {};
+			mgs(args.mgs),
+			imu(args.imuPort) {};
+
+		pros::IMU& getIMU() {
+			return imu;
+		}
 
 		// TODO: Implement PID functions (and copy over legacy code)
 
@@ -663,22 +671,14 @@ namespace hyper {
 			float high;
 		};
 
-		/// @brief Sigmoid for tank control on single side
-		/// @param estimate Amount to estimate (linearly interpolate or extrapolate) between sigmoid and linear speeds
-		/// @param extremas Multiplier of individual extremas (layered on top of the sigmoid estimation coefficient)
-		/// @param dynamic Recalculate sigmoid curve to fit low and high deadbands
-		struct TankSigmoid {
-			float estimate = 1.0;
-			Vertical extremas = {1.0, 1.0};
-		};
-
 		/// @brief Speed for tank control on single side
 		/// @param base Base speed for the side
-		/// @param deadbands Absolute deadbands for the side
+		/// @param deadband Absolute deadband for the side
+		/// @param sigmoid Sigmoid for the side
 		struct TankSpeed {
 			float base = 1.0;
 			float deadband = 0.0;
-			TankSigmoid sigmoid = {};
+			Vertical sigmoid = {1.0, 1.0};
 		};
 
 		// Tank speeds for left and right sides
@@ -770,11 +770,11 @@ namespace hyper {
 			return {left, right};
 		}
 
-		float atacSigmoid(float speed, const TankSigmoid& sigmoid) {
+		float atacSigmoid(float speed, const Vertical& sigmoid) {
 			if (speed < 0.5) {
-				speed = 0.5 * std::pow(2 * speed, sigmoid.extremas.low);
+				speed = 0.5 * std::pow(2 * speed, sigmoid.low);
 			} else {
-				speed = 1 - 0.5 * std::pow(2 - (2 * speed), sigmoid.extremas.high);
+				speed = 1 - 0.5 * std::pow(2 - (2 * speed), sigmoid.high);
 			}
 
 			return speed;
