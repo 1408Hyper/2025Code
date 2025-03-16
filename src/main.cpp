@@ -618,6 +618,12 @@ namespace hyper {
 				return tickMs;
 			}
 
+			/// @brief Gets the current time in milliseconds
+			/// @return Current time in milliseconds
+			std::uint32_t getTimeMs() {
+				return ms;
+			}
+
 			/// @brief Setup a new timeout
 			/// @param timeout Timeout object to setup
 			void setupTimeout(Timeout timeout) {
