@@ -1441,8 +1441,8 @@ hyper::AbstractChassis* currentChassis;
 
 void initDefaultChassis() {
 	static hyper::Chassis defaultChassis({
-		{{LEFT_DRIVE_PORTS, RIGHT_DRIVE_PORTS, IMU_PORT}, // Drivetrain args
-	}});
+		{{{LEFT_DRIVE_PORTS, RIGHT_DRIVE_PORTS}, IMU_PORT}} // Drivetrain MGs and IMU ports
+	});
 	
 	currentChassis = &defaultChassis;
 }
