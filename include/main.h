@@ -94,7 +94,8 @@ using std::unique_ptr;
 using std::shared_ptr;
 
 // Shorthands for port types & other type aliases
-using MGPorts = vector<std::int8_t>;
+using DigiPort = std::int8_t;
+using MGPorts = vector<DigiPort>;
 using AnalogPort = char;
 
 using VoidFunc = std::function<void()>;

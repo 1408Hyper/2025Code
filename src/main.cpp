@@ -1188,7 +1188,42 @@ namespace hyper {
 			}
 		}; // class DriveControl
 
-		
+		class DriveManager : public AbstractComponent {
+		private:
+		protected:
+		public:
+			/// @brief Structure for DriveManager options provided by user
+			/// @param drivePorts Ports for drivetrain
+			/// @param imuPort Port for IMU
+			struct DriveManagerUserArgs {
+				DriveMGs::DrivePorts drivePorts;
+				DigiPort imuPort;
+			};
+
+			/// @brief Args for DriveManager object
+			/// @param abstractComponentArgs Args for AbstractComponent object
+			/// @param user Args for DriveManager object provideed by user
+			struct DriveManagerArgs {
+				AbstractComponentArgs abstractComponentArgs;
+				DriveManagerUserArgs user;
+			};
+
+			DriveMGs mgs;
+			DrivePID pid;
+			DriveControl control;
+
+			/// @brief Creates DriveManager object
+			/// @param args Args for DriveManager object (check args struct for more info)
+			DriveManager(DriveManagerArgs args) : 
+				AbstractComponent(args.abstractComponentArgs),
+				mgs({args.user.drivePorts}),
+				pid({&mgs, args.user.imuPort}),
+				control({args.abstractComponentArgs, &mgs}) {};
+
+			void opControl() override {
+				control.opControl();
+			}
+		}; // class DriveManager
 	} // namespace Drivetrain
 
 	/// @brief Class which manages all components
@@ -1196,7 +1231,7 @@ namespace hyper {
 	private:
 	protected:
 	public:
-		Drivetrain dvt;
+		Drivetrain::DriveManager drive;
 
 		Timer timer;
 		
@@ -1206,7 +1241,7 @@ namespace hyper {
 		/// @brief Args for component manager object passed to the chassis, such as ports
 		/// @param dvtPorts Ports for drivetrain
 		struct ComponentManagerUserArgs {
-			Drivetrain::DrivetrainPorts dvtPorts;
+			Drivetrain::DriveManager::DriveManagerUserArgs driveArgs;
 		};
 
 		/// @brief Args for component manager object
@@ -1222,11 +1257,12 @@ namespace hyper {
 		ComponentManager(ComponentManagerArgs args) : 
 			AbstractComponent(args.aca),
 
-			dvt({args.aca, args.user.dvtPorts}),	
-			timer({args.aca}) { 												// Add component pointers to vector
+			drive({args.aca, args.user.driveArgs}),	
+			timer({args.aca}) {
+				// Add component pointers to vector
 				// MUST BE DONE AFTER INITIALISATION not BEFORE because of pointer issues
 				components = {
-					&dvt,
+					&drive,
 					&timer
 				};
 			};
@@ -1384,6 +1420,7 @@ namespace hyper {
 			cm.skillsPrep();
 		}
 
+		/// @brief Post auton function for the chassis
 		void postAuton() override {
 			cm.postAuton();
 		}
@@ -1437,7 +1474,7 @@ void preControl() {
 
 	bool inComp = pros::competition::is_connected();
 
-	// competition auton test safeguard
+	// Run autonomous even if we are NOT in the compeition
 	if (!inComp) {
 		autonomous();
 	}
