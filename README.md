@@ -2,7 +2,7 @@
 
 <center><h1> ⚡<em><strong>1408H</em></strong>yper @ VRC 2025-26</center></h1>
 
-[![Github Actions Makefile CI](https://github.com/helloworld3200/1408Hyper-2024VRC-Code/actions/workflows/c-cpp.yml/badge.svg)](https://github.com/helloworld3200/1408Hyper-2024VRC-Code/actions/workflows/c-cpp.yml)
+[![Github Actions Makefile CI](https://github.com/1408Hyper/2025Code/actions/workflows/c-cpp.yml/badge.svg)](https://github.com/1408Hyper/2025Code/actions/workflows/c-cpp.yml)
 
 > 1408H's source code for the 2025-26 season of VRC.
 
@@ -18,7 +18,8 @@ Additionally, our code features a [**custom built CI/CD testing suite via GitHub
 ## Primary Features
 
 - **Custom-built & tuned PID Controller (integrated with IMU, IME and dedicated odometry encoders)** for autonomous routines
-- **Multi-mode operator drivetrain control** with easy switching between Arcade, Tank, Curved Arcade including built-in **sinusodial sensitivity smoothing curves**
+- **Multi-mode operator drivetrain control** with easy switching between Arcade, Tank, Curved Arcade including built-in **dual sigmoid sensitivity smoothing curves**
+- **Thread-independent concurrent task scheduling system** eliminates race conditions when working with our **component system**
 - **Component-based class system (together with a plethora of base abstract classes)** also provides easier programming of newly engineered subsystems
 - *More coming soon further into the season!*
 
