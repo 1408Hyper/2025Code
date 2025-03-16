@@ -180,15 +180,15 @@ namespace hyper {
 	/// @brief Class for components of the chassis to derive from
 	class AbstractComponent {
 	private:
-	public:
-		static constexpr std::uint8_t MAX_BRAIN_LINES = 8;
-		static constexpr std::uint8_t MAX_CONTROLLER_LINES = 2;
-		static constexpr std::uint8_t CONTROLLER_TXT_START_COL = 0;
 	protected:
 		AbstractChassis* chassis;
 
 		pros::Controller* master;
 	public:
+		static constexpr std::uint8_t MAX_BRAIN_LINES = 8;
+		static constexpr std::uint8_t MAX_CONTROLLER_LINES = 2;
+		static constexpr std::uint8_t CONTROLLER_TXT_START_COL = 0;
+
 		/// @brief Args for AbstractComponent object
 		/// @param chassis AbstractChassis derived object to be used for the component
 		struct AbstractComponentArgs {
@@ -285,12 +285,6 @@ namespace hyper {
 		/// @return Engaged state of the mech
 		bool getEngaged() {
 			return engaged;
-		}
-
-		/// @brief Sets the engaged state of the mech (DO NOT USE UNLESS ABSOLUTELY NECESSARY!!)
-		/// @param value Value to set the engaged state to (DO NOT USE UNLESS ABSOLUTELY NECESSARY!!)
-		void doNotUseThisInYourLifeEver_ForceSetEngaged(bool value) {
-			engaged = value;
 		}
 
 		virtual ~AbstractMech() = default;
@@ -422,7 +416,7 @@ namespace hyper {
 	};
 
 	/// @brief Class for a toggle on the controller
-	class BiToggle { // Don't need to derive from AbstractComponent because no need for Chassis pointer
+	class BiToggle : public AbstractComponent {
 	public:
 		enum class State {
 			OFF,
@@ -431,8 +425,6 @@ namespace hyper {
 		};
 	private:
 		AbstractMG* component;
-
-		pros::Controller* master;
 		
 		State state = State::OFF;
 		bool isNewPress = true;
@@ -487,9 +479,11 @@ namespace hyper {
 		};
 
 		/// @brief Args for BiToggle object
+		/// @param abstractComponentArgs Args for AbstractComponent object
 		/// @param component Component to toggle
 		/// @param btns Buttons for toggle
 		struct BiToggleArgs {
+			AbstractComponentArgs abstractComponentArgs;
 			AbstractMG* component;
 			Buttons btns;
 		};
@@ -499,9 +493,9 @@ namespace hyper {
 		/// @brief Creates BiToggle object
 		/// @param args Args for BiToggle object (check args struct for more info)
 		BiToggle(BiToggleArgs args) : 
+			AbstractComponent(args.abstractComponentArgs),
 			component(args.component),
-			btns(args.btns),
-			master(&args.component->getMaster()) {};
+			btns(args.btns) {};
 
 		void opControl() {
 			bool fwdPressed = master->get_digital(btns.fwd);
