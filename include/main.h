@@ -48,7 +48,7 @@
 #include <sstream>
 // Memory management
 #include <memory>
-// Perfect forwarding
+// Perfect forwarding; pairs
 #include <utility>
 // Function args
 #include <functional>

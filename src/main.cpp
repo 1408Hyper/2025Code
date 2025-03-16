@@ -150,7 +150,23 @@ namespace hyper {
 		static constexpr std::int32_t MOVE_MIN = -127;
 		static constexpr std::int32_t MOVE_MAX = 127;
 
-		static constexpr std::int32_t MILLIVOLT_MAX = 12000;
+		static constexpr float MILLIVOLT_MAX = 12000;
+	};
+
+	/// @brief Base struct for any values on the horizontal axis
+	/// @param left Left side value
+	/// @param right Right side value
+	struct Horizontal {
+		float left;
+		float right;
+	};
+
+	/// @brief Vertical axis struct
+	/// @param low Low value
+	/// @param high High value
+	struct Vertical {
+		float low;
+		float high;
 	};
 
 	// Class declarations
@@ -542,916 +558,62 @@ namespace hyper {
 		}
 	}; // class BiToggle
 
-	/// @brief Struct for drivetrain motor groups
-	/// @param left Left motor group
-	/// @param right Right motor group
-	struct DriveMGs {
-		pros::MotorGroup left;
-		pros::MotorGroup right;
-	};
-
-	/// @brief Class to control autonomous PID routines for driving
-	class DrivePID {
-	private:
-		DriveMGs* mgs;
-
-		pros::IMU imu;
-	protected:
-	public:
-		struct DrivePIDArgs {
-			DriveMGs* mgs;
-			std::int8_t imuPort;
-		};
-
-		DrivePID(DrivePIDArgs args) : 
-			mgs(args.mgs),
-			imu(args.imuPort) {};
-
-		pros::IMU& getIMU() {
-			return imu;
-		}
-
-		// TODO: Implement PID functions (and copy over legacy code)
-
-		// New unified PID movement function (under development)
-		void move() {
-
-		}
-
-		// Legacy only lateral movement with PID
-		void lateral() {
-
-		}
-
-		// Legacy only turning with PID
-		void turn() {
-
-		}
-	}; // class DrivePID
-
-	/// @brief Class to manage drivetrain operator control
-	class DriveControl : public AbstractComponent {
-	public:
-		/// @brief Base struct for any values on the horizontal axis
-		/// @param left Left side value
-		/// @param right Right side value
-		struct Horizontal {
-			float left;
-			float right;
-		};
-
-		enum class DriveControlMode {
-			ARCADE,
-			TANK,
-			ATAC
-		};
-
-		std::function<Horizontal()> driveControl;
-
-		DriveControlMode driveControlMode;
-
-		DriveMGs* mgs;
-
-		/// @brief Args for DriveControl object
-		/// @param abstractComponentArgs Args for AbstractComponent object
-		struct DriveControlArgs {
-			AbstractComponentArgs abstractComponentArgs;
-			DriveMGs* mgs;
-		};
-
-		/// @brief Struct for different driver control speeds on arcade control
-		/// @param turnSpeed Multiplier for only turning
-		/// @param forwardBackSpeed Multiplier for only forward/backward
-		/// @param arcSpeed Multiplier of opposite turn for when turning and moving laterally at the same time
-		// (higher value means less lateral movement)
-		struct ArcadeControlSpeed {
-		private:
-			float forwardBackSpeed;
-			float maxLateral;
-		public:
-			static constexpr float controllerMax = 127;
-
-			float turnSpeed;
-			float arcSpeed;
-
-			/// @brief Sets the forward/backward speed
-			/// @param speed Speed to set the forward/backward speed to
-			// (Also prepares maxLateral for arc movement)
-			void setForwardBackSpeed(float speed, float maxTolerance = 1) {
-				forwardBackSpeed = speed;
-				maxLateral = speed * controllerMax + maxTolerance;
-			}
-
-			/// @brief Gets the forward/backward speed
-			/// @return Forward/backward speed
-			float getForwardBackSpeed() {
-				return forwardBackSpeed;
-			}
-
-			/// @brief Gets the max lateral movement
-			/// @return Max lateral movement
-			float getMaxLateral() {
-				return maxLateral;
-			}
-
-			// lower arc speed is lower turning
-
-			ArcadeControlSpeed(float turnSpeed = 1, float forwardBackSpeed = 1, float arcSpeed = 0.7) :
-				turnSpeed(turnSpeed), 
-				arcSpeed(arcSpeed) {
-					setForwardBackSpeed(forwardBackSpeed);
-			}
-		};
-
-		ArcadeControlSpeed arcadeSpeed = {};
-
-		// Base struct for vertical values
-		struct Vertical {
-			float low;
-			float high;
-		};
-
-		/// @brief Speed for tank control on single side
-		/// @param base Base speed for the side
-		/// @param deadband Absolute deadband for the side
-		/// @param sigmoid Sigmoid for the side
-		struct TankSpeed {
-			float base = 1.0;
-			float deadband = 0.0;
-			Vertical sigmoid = {1.0, 1.0};
-		};
-
-		// Tank speeds for left and right sides
-		TankSpeed tankSpeeds[2] = {{}, {}};
-	private:
-		// Coefficients for turning in driver control
-		struct TurnCoefficients {
-			float left;
-			float right;
-		};
-
-		void bindDriveControl(Horizontal (DriveControl::*driveFunc)()) {
-			driveControl = std::bind(driveFunc, this);
-		}
-
-		void prepareArcadeLateral(float& lateral) {
-			// Change to negative to invert
-			lateral *= -1;
-		}
-
-		// Calculate the movement of the robot when turning and moving laterally at the same time
-		void calculateArcMovement(TurnCoefficients& turnCoeffs, float lateral, float turn, float maxLateralTolerance = 1, float arcDeadband = 30) {
-			if (std::fabs(lateral) < arcDeadband) {
-				return;
-			}
-
-			// 0-1 range of percentage of lateral movement against max possible lateral movement
-			float lateralCompensation = lateral / arcadeSpeed.getMaxLateral();
-			// Decrease the turn speed when moving laterally (higher turn should be higher turnDecrease)
-			float dynamicArcSpeed = (lateral < 0) ? arcadeSpeed.arcSpeed : 1;
-
-			float turnDecrease = 1 * turn * lateralCompensation * dynamicArcSpeed;
-
-			if (lateral > 0) {
-				turnDecrease *= turn * 0.0001;
-			}
-
-			if (turn > 0) { // Turning to right so we decrease the left MG
-				turnCoeffs.left += (lateral < 0) ? -turnDecrease : turnDecrease;
-			} else { // Turning to left so we decrease the right MG
-				turnCoeffs.right += (lateral > 0) ? -turnDecrease : turnDecrease;
-			}
-
-			pros::lcd::print(6, ("TD, dAS:, lComp: " + std::to_string(turnDecrease) + ", " + std::to_string(dynamicArcSpeed) + ", " + std::to_string(lateralCompensation)).c_str());
-		}
-
-		TurnCoefficients calculateArcadeTurns(float turn, float lateral) {
-			turn *= 1;
-
-			TurnCoefficients turnCoeffs = {turn, turn};
-
-			// Allow for arc movement
-			calculateArcMovement(turnCoeffs, lateral, turn);
-
-			return turnCoeffs;
-		}
-
-		Horizontal arcadeControl() {
-			float lateral = master->get_analog(ANALOG_LEFT_Y);    // Gets amount forward/backward from left joystick
-			float turn = master->get_analog(ANALOG_RIGHT_X);  // Gets the turn left/right from right joystick
-
-			prepareArcadeLateral(lateral);
-
-			TurnCoefficients turnCoeffs = calculateArcadeTurns(turn, lateral);
-			
-			pros::lcd::print(1, ("T, L:" + std::to_string(turn) + ", " + std::to_string(lateral)).c_str());
-
-			// Calculate speeds
-			lateral *= arcadeSpeed.getForwardBackSpeed();
-
-			turnCoeffs.left *= arcadeSpeed.turnSpeed;
-			turnCoeffs.right *= arcadeSpeed.turnSpeed;
-
-			// Ensure voltages are within correct ranges
-			float left_speed = lateral - turnCoeffs.left;
-			float right_speed = lateral + turnCoeffs.right;
-
-			pros::lcd::print(2, ("L/R COEF: " + std::to_string(turnCoeffs.left) + ", " + std::to_string(turnCoeffs.right)).c_str());
-			pros::lcd::print(7, ("LEFT/RIGHT: " + std::to_string(left_speed) + ", " + std::to_string(right_speed)).c_str());
-
-			return {left_speed, right_speed};
-		}
-
-		// Basic tank control
-		Horizontal tankControl() {
-			float left = master->get_analog(ANALOG_LEFT_Y) * tankSpeeds[0].base;
-			float right = master->get_analog(ANALOG_RIGHT_Y) * tankSpeeds[1].base;
-
-			return {left, right};
-		}
-
-		float atacSigmoid(float speed, const Vertical& sigmoid) {
-			if (speed < 0.5) {
-				speed = 0.5 * std::pow(2 * speed, sigmoid.low);
-			} else {
-				speed = 1 - 0.5 * std::pow(2 - (2 * speed), sigmoid.high);
-			}
-
-			return speed;
-		}
-
-		// ATAC on individual axis (ran for each axis)
-		float atacAxis(float speed, const TankSpeed& tankSpeed) {
-			// Process deadbands
-			if (speed < tankSpeed.deadband) {
-				return 0;
-			}
-
-			speed *= tankSpeed.base;
-
-			speed = atacSigmoid(speed, tankSpeed.sigmoid);
-
-			return speed;
-		}
-
-		// Advanced Tank Action Control: Implementing all features we've ever wanted
-		Horizontal atac() {
-			float speeds[2] = {
-				master->get_analog(ANALOG_LEFT_Y),
-				master->get_analog(ANALOG_RIGHT_Y)
-			};
-		
-			int index = 0;
-			for (float& speed : speeds) {
-				// Rescale to -1 to 1 value
-				speed /= MotorBounds::MOVE_MAX;
-
-				// Process speed on one axis
-				speed = atacAxis(speed, tankSpeeds[index]);
-
-				// Rescale to -127 to 127 value
-				speed *= MotorBounds::MOVE_MAX;
-
-				index++;
-			}
-
-			return {speeds[0], speeds[1]};
-		}
-
-		// Final fallback driver control to default back to final working mode
-		Horizontal fallbackControl() {
-			return tankControl();
-		}
-
-		// REMEMBER: preparing the move speed must be done in Drivetrain class, NOT in DriveControl class
-	public:
-		/// @brief Sets the driver control mode
-		/// @param mode Mode to set the driver control to
-		void setDriveControlMode(DriveControlMode mode = DriveControlMode::TANK) {
-			driveControlMode = mode;
-
-			switch (driveControlMode) {
-				case DriveControlMode::ARCADE:
-					bindDriveControl(&DriveControl::arcadeControl);
-					break;
-				case DriveControlMode::TANK:
-					bindDriveControl(&DriveControl::tankControl);
-					break;
-				case DriveControlMode::ATAC:
-					bindDriveControl(&DriveControl::atac);
-				default:
-					bindDriveControl(&DriveControl::fallbackControl);
-					break;
-			}
-		}
-
-		/// @brief Creates DriveControl object
-		/// @param args Args for DriveControl object (check args struct for more info)
-		DriveControl(DriveControlArgs args) : 
-			AbstractComponent(args.abstractComponentArgs),
-			mgs(args.mgs) {
-				setDriveControlMode();
-			};
-
-		void opControl() override {
-			Horizontal speeds = driveControl();
-
-			mgs->left.move(prepareMoveSpeed(speeds.left));
-			mgs->right.move(prepareMoveSpeed(speeds.right));
-		}
-	}; // class DriveControl
-
-	/// @brief Class for drivetrain management
-	class Drivetrain : public AbstractComponent {
-	public:
-		/// @brief Enum for different driver control modes
-		enum class DriveControlMode {
-			ARCADE,
-			TANK
-		};
-	private:
-		pros::MotorGroup left_mg;
-		pros::MotorGroup right_mg;
-
-		int leftMgSize;
-		int rightMgSize;
-
-		// PID stuff
-		// TODO: Move to separate class
-		pros::IMU imu;
-
-		DriveControlMode driveControlMode;
-
-		std::function<void()> driveControl;
-
-		void bindDriveControl(void (Drivetrain::*driveFunc)()) {
-			driveControl = std::bind(driveFunc, this);
-		}
-
-		/// @brief Calibrates the IMU
-		void calibrateIMU(bool blocking = true) {
-			imu.reset(blocking);
-			imu.tare();
-		}
-	protected:
-	public:
-		/// @brief Struct for different driver control speeds on arcade control
-		/// @param turnSpeed Multiplier for only turning
-		/// @param forwardBackSpeed Multiplier for only forward/backward
-		/// @param arcSpeed Multiplier of opposite turn for when turning and moving laterally at the same time
-		// (higher value means less lateral movement)
-		struct DriveControlSpeed {
-		private:
-			float forwardBackSpeed;
-			float maxLateral;
-		public:
-			static constexpr float controllerMax = 127;
-
-			float turnSpeed;
-			float arcSpeed;
-
-			/// @brief Sets the forward/backward speed
-			/// @param speed Speed to set the forward/backward speed to
-			// (Also prepares maxLateral for arc movement)
-			void setForwardBackSpeed(float speed, float maxTolerance = 1) {
-				forwardBackSpeed = speed;
-				maxLateral = speed * controllerMax + maxTolerance;
-			}
-
-			/// @brief Gets the forward/backward speed
-			/// @return Forward/backward speed
-			float getForwardBackSpeed() {
-				return forwardBackSpeed;
-			}
-
-			/// @brief Gets the max lateral movement
-			/// @return Max lateral movement
-			float getMaxLateral() {
-				return maxLateral;
-			}
-
-			// lower arc speed is lower turning
-
-			DriveControlSpeed(float turnSpeed = 1, float forwardBackSpeed = 1, float arcSpeed = 0.7) :
-				turnSpeed(turnSpeed), 
-				arcSpeed(arcSpeed) {
-					setForwardBackSpeed(forwardBackSpeed);
-			}
-		};
-
-
-		/// @brief Ports for the drivetrain
-		/// @param leftPorts Vector of ports for left motors
-		/// @param rightPorts Vector of ports for right motors
-		struct DrivetrainPorts {
-			vector<std::int8_t> left;
-			vector<std::int8_t> right;
-			std::int8_t imuPort;
-		};
-
-		/// @brief Args for drivetrain object
-		/// @param abstractComponentArgs Args for AbstractComponent object
-		struct DrivetrainArgs {
-			AbstractComponentArgs abstractComponentArgs;
-			DrivetrainPorts ports;
-		};
-
-		using ArgsType = DrivetrainArgs;
-
-		/// @brief Struct for PID options (self-explanatory - timeLimit in MS)
-		struct PIDOptions {
-			double kP;
-			double kI;
-			double kD;
-			double errorThreshold;
-			float timeLimit;
-		};
-
-		DriveControlSpeed driveControlSpeed = {};
-
-		bool preventBackMove = false;
-
-		std::int32_t defaultMoveVelocity = 1024;
-		std::int8_t maxRelativeError = 5;
-
-		std::int16_t maxTurnVelocity = 60;
-		float minTurnThreshold = 5;
-
-		float relativeMovementCoefficient = 14.2857;
-		float voltMovementCoefficient = 1;
-
-		float maxVoltage = 12000;
-
-		// Motor builtin encoder inchesPerTick
-		double inchesPerTick = 0.034034;
-		//double inchesPerTick = 1.0;
-
-		// Odom wheel encoder inchesPerTick
-		// TODO: Calculate this
-		double odomIPT = 0.0;
-
-		uint32_t moveDelayMs = 2;
-
-		// right is positive
-		// left is negative
-		int pidInvertTurn = 1;
-		float pidReductionFactor = 1.9;
-
-		float arcDeadband = 30;
-
-		/// @brief Sets the brake mode for each motor group
-		/// @param mode Brake mode to set the motors toS
-		void setBrakeModes(pros::motor_brake_mode_e_t mode) {
-			left_mg.set_brake_mode_all(mode);
-			right_mg.set_brake_mode_all(mode);
-		}
-
-		Drivetrain(DrivetrainArgs args) : 
-			AbstractComponent(args.abstractComponentArgs),
-			left_mg(args.ports.left),
-			right_mg(args.ports.right),
-			imu(args.ports.imuPort),
-			leftMgSize(args.ports.left.size()),
-			rightMgSize(args.ports.right.size()) {
-				setDriveControlMode();
-				calibrateIMU();
-			};
-	private:
-		void prepareArcadeLateral(float& lateral) {
-			// Change to negative to invert
-			lateral *= -1;
-
-			// Clamp the range to above 0 only to remove back movement
-			if (preventBackMove && (lateral < 0)) {
-				lateral = 0;
-			}
-		}
-
-		// Calculate the movement of the robot when turning and moving laterally at the same time
-		void calculateArcMovement(TurnCoefficients& turnCoeffs, float lateral, float turn, float maxLateralTolerance = 1) {
-			if (std::fabs(lateral) < arcDeadband) {
-				return;
-			}
-
-			// 0-1 range of percentage of lateral movement against max possible lateral movement
-			float lateralCompensation = lateral / driveControlSpeed.getMaxLateral();
-			// Decrease the turn speed when moving laterally (higher turn should be higher turnDecrease)
-			float dynamicArcSpeed = (lateral < 0) ? driveControlSpeed.arcSpeed : 1;
-
-			float turnDecrease = 1 * turn * lateralCompensation * dynamicArcSpeed;
-
-			if (lateral > 0) {
-				turnDecrease *= turn * 0.0001;
-			}
-
-			if (turn > 0) { // Turning to right so we decrease the left MG
-				turnCoeffs.left += (lateral < 0) ? -turnDecrease : turnDecrease;
-			} else { // Turning to left so we decrease the right MG
-				turnCoeffs.right += (lateral > 0) ? -turnDecrease : turnDecrease;
-			}
-
-			pros::lcd::print(6, ("TD, dAS:, lComp: " + std::to_string(turnDecrease) + ", " + std::to_string(dynamicArcSpeed) + ", " + std::to_string(lateralCompensation)).c_str());
-		}
-
-		TurnCoefficients calculateArcadeTurns(float turn, float lateral) {
-			turn *= 1;
-
-			TurnCoefficients turnCoeffs = {turn, turn};
-
-			// Allow for arc movement
-			calculateArcMovement(turnCoeffs, lateral, turn);
-
-			return turnCoeffs;
-		}
-	public:
-		void opControl() override {
-			driveControl();
-		}
-
-		/// @brief Arcade control for drive control (recommended to use opControl instead)
-		void arcadeControl() {
-			float lateral = master->get_analog(ANALOG_LEFT_Y);    // Gets amount forward/backward from left joystick
-			float turn = master->get_analog(ANALOG_RIGHT_X);  // Gets the turn left/right from right joystick
-
-			prepareArcadeLateral(lateral);
-
-			TurnCoefficients turnCoeffs = calculateArcadeTurns(turn, lateral);
-			
-			pros::lcd::print(1, ("T, L:" + std::to_string(turn) + ", " + std::to_string(lateral)).c_str());
-
-			// Calculate speeds
-			lateral *= driveControlSpeed.getForwardBackSpeed();
-
-			turnCoeffs.left *= driveControlSpeed.turnSpeed;
-			turnCoeffs.right *= driveControlSpeed.turnSpeed;
-
-			// Ensure voltages are within correct ranges
-			std::int32_t left_voltage = prepareMoveVoltage(lateral - turnCoeffs.left);
-			std::int32_t right_voltage = prepareMoveVoltage(lateral + turnCoeffs.right);
-
-			pros::lcd::print(2, ("L/R COEF: " + std::to_string(turnCoeffs.left) + ", " + std::to_string(turnCoeffs.right)).c_str());
-			pros::lcd::print(7, ("LEFT/RIGHT: " + std::to_string(left_voltage) + ", " + std::to_string(right_voltage)).c_str());
-
-			left_mg.move(left_voltage);
-			right_mg.move(right_voltage);
-		}
-
-		void tankControl() {
-			float left = master->get_analog(ANALOG_LEFT_Y);
-			float right = master->get_analog(ANALOG_RIGHT_Y);
-
-			left_mg.move(prepareMoveVoltage(left));
-			right_mg.move(prepareMoveVoltage(right));
-		}
-
-		/// @brief Fallback control that DriveControlMode switch statement defaults to.
-		void fallbackControl() {
-			arcadeControl();
-		}
-
-		/// @brief Sets the driver control mode
-		/// @param mode Mode to set the driver control to
-		void setDriveControlMode(DriveControlMode mode = DriveControlMode::TANK) {
-			driveControlMode = mode;
-
-			switch (driveControlMode) {
-				case DriveControlMode::ARCADE:
-					bindDriveControl(&Drivetrain::arcadeControl);
-					break;
-				case DriveControlMode::TANK:
-					bindDriveControl(&Drivetrain::tankControl);
-					break;
-				default:
-					bindDriveControl(&Drivetrain::fallbackControl);
-					break;
-			}
-		}
-
-		/// @brief Moves the motors at a specific voltage
-		/// @param leftVoltage Voltage for left motor
-		/// @param rightVoltage Voltage for right motor
-		void moveVoltage(std::int16_t leftVoltage, std::int16_t rightVoltage) {
-			left_mg.move_voltage(leftVoltage);
-			right_mg.move_voltage(rightVoltage);
-			pros::lcd::print(0, ("Left Voltage: " + std::to_string(leftVoltage)).c_str());
-			pros::lcd::print(1, ("Right Voltage: " + std::to_string(rightVoltage)).c_str());
-		}
-
-		/// @brief Moves the motors at a single voltage
-		/// @param voltage Voltage to move the motors at
-		void moveSingleVoltage(std::int16_t voltage) {
-			moveVoltage(voltage, voltage);
-		}
-
-		/// @brief Sets movement velocity
-		/// @param leftVoltage Voltage for left motor
-		/// @param rightVoltage Voltage for right motor
-		void moveVelocity(std::int32_t leftVoltage, std::int32_t rightVoltage) {
-			left_mg.move_velocity(leftVoltage);
-			right_mg.move_velocity(rightVoltage);
-		}
-
-		/// @brief Moves the motors at a single velocity
-		/// @param voltage Voltage to move the motors at
-		void moveSingleVelocity(std::int32_t voltage) {
-			moveVelocity(voltage, voltage);
-		}
-
-		/// @brief Stops moving the motors
-		void moveStop() {
-			moveSingleVelocity(0);
-		}
-
-		/// @brief Tares the motors
-		void tareMotors() {
-			left_mg.tare_position();
-			right_mg.tare_position();
-		}
-
-		/// @brief Move to relative position
-		/// @param pos Position to move to in CM
-		void moveRelPos(double pos) {
-			tareMotors();
-
-			pos *= relativeMovementCoefficient;
-
-			left_mg.move_relative(pos, defaultMoveVelocity);
-			right_mg.move_relative(pos, defaultMoveVelocity);
-
-			double lowerError = pos - maxRelativeError;
-
-			while ((
-				!(left_mg.get_position() > lowerError)
-			) && (
-				!(right_mg.get_position() > lowerError)
-			)) {
-				pros::delay(moveDelayMs);
-			}
-
-			moveStop();
-		}
-
-		/// @brief Turn to a specific angle
-		/// @param angle Angle to turn to
-		void turnTo(double angle) {
-			imu.tare();
-
-			double currentHeading = imu.get_heading();
-			double angleDifference = normaliseAngle(angle - currentHeading);
-
-			std::int16_t turnDirection = (angleDifference > 0) ? maxTurnVelocity : -maxTurnVelocity;
-			//std::int16_t turnDirection = maxTurnVelocity;
-			
-			left_mg.move_velocity(turnDirection);
-			right_mg.move_velocity(-turnDirection);
-
-			while (true) {
-				currentHeading = imu.get_heading();
-				angleDifference = normaliseAngle(angle - currentHeading);
-				
-				if (std::fabs(angleDifference) <= minTurnThreshold) {
-					break;
-				}
-				
-				pros::lcd::set_text(2, "Current heading: " + std::to_string(currentHeading));
-				pros::delay(moveDelayMs);
-			}
-
-			moveStop();
-		}
-
-		/// @brief Turn to a specific angle with a delay
-		/// @param angle Angle to turn to
-		/// @param delayMs Delay in milliseconds
-		void turnDelay(bool direction, std::uint32_t delayMs, std::int16_t delayTurnVelocity = 60) {
-			std::int16_t turnDirection = (direction) ? delayTurnVelocity : -delayTurnVelocity;
-
-			left_mg.move_velocity(turnDirection);
-			right_mg.move_velocity(-turnDirection);
-
-			pros::delay(delayMs);
-
-			moveStop();
-		}
-
-		/// @brief Move forward for a certain number of milliseconds
-		/// @param delayMs Number of milliseconds to move forward
-		/// @param left Whether to move the left motor
-		/// @param right Whether to move the right motor
-		void moveDelay(std::uint32_t delayMs, bool forward = true, std::int16_t delayMoveVelocity = 60) {
-			if (forward) {
-				moveSingleVelocity(-delayMoveVelocity);
-			} else {
-				moveSingleVelocity(delayMoveVelocity);
-			}
-
-			pros::delay(delayMs);
-			moveStop();
-		}
-
-		double getHeading() {
-			return imu.get_heading();
-		}
-
-		double getAvgMotorPos() {
-			/*vector<double> leftPos = left_mg.get_position_all();
-			vector<double> rightPos = right_mg.get_position_all();
-
-			double avgLeft = calcMeanFromVector(leftPos, leftMgSize);
-			double avgRight = calcMeanFromVector(rightPos, rightMgSize);*/
-
-			double avgPos = (left_mg.get_position() + right_mg.get_position()) / 2;
-
-			return avgPos;
-		}
-
-		// TODO: Generic PID function that we can apply to PIDTurn and PIDMove
-		// maybe make a class for this? if it gets too complicated
-		// but that would also require refactoring Drivetrain to have an AbstractDrivetrain
-		// parent to avoid cyclic dependencies
-
-		// WARNING: do NOT use relativeMovementCoefficient for PID functions
-		// as this does not account for acceleration/deceleration
-		// it's only for simple movement (phased out by PID & PIDOptions struct)
-
-		/// @brief Turn to a specific angle using PID
-		/// @param angle Angle to move to (PASS IN THE RANGE OF -180 TO 180 for left and right)
-		// TODO: Tuning required
-		void PIDTurn(double angle, float reductionFactor = 2, PIDOptions options = {
-			0.3, 0.0, 0.7, 1, 6000
-		}) {
-			imu.tare();
-			angle = naiveNormaliseAngle(angle);
-
-			angle *= pidInvertTurn;
-
-			angle /= -1;
-
-			bool anglePositive = angle > 0;
-			bool turn180 = false;
-
-			// IMU already tared so we don't need to get the current heading
-			float error = angle;
-			float lastError = 0;
-			float derivative = 0;
-			float integral = 0;
-
-			float out = 0;
-			float trueHeading = 0;
-
-			float maxThreshold = 180 - options.errorThreshold;
-
-			float maxCycles = options.timeLimit / moveDelayMs;
-			float cycles = 0;
-
-			if (std::fabs(angle) >= 180) {
-				turn180 = true;
-			}
-
-			pros::lcd::print(3, "PIDTurn Start");
-
-			// with turning you just wanna move the other MG at negative of the MG of the direction
-			// which u wanna turn to
-
-			while (true) {
-				trueHeading = std::fmod((imu.get_heading() + 180), 360) - 180;
-				error = angle - trueHeading;
-
-				integral += error;
-				// Anti windup
-				if (std::fabs(error) < options.errorThreshold) {
-					integral = 0;
-				}
-
-				derivative = error - lastError;
-				out = (options.kP * error) + (options.kI * integral) + (options.kD * derivative);
-				lastError = error;
-
-				out *= 1000; // convert to mV
-				out = std::clamp(out, -maxVoltage, maxVoltage);
-				out /= pidReductionFactor;
-				moveVoltage(-out, out);
-
-				pros::lcd::print(5, ("PIDTurn Out: " + std::to_string(out)).c_str());
-				pros::lcd::print(7, ("PIDTurn Error: " + std::to_string(error)).c_str());
-				pros::lcd::print(6, ("PIDTurn True Heading: " + std::to_string(imu.get_heading())).c_str());
-
-				if (std::fabs(error) <= options.errorThreshold) {
-					break;
-				}
-
-				// 180 degree turning
-				if (std::fabs(trueHeading) >= maxThreshold) {
-					break;
-				}
-
-				// TODO: refactor checks in prod
-				if (std::fabs(out) < 100) {
-					pros::lcd::print(4, "PIDTurn Out too low");
-				}
-
-				if (cycles >= maxCycles) {
-					pros::lcd::print(4, "PIDTurn Time limit reached");
-					break;
-				}
-
-				pros::delay(moveDelayMs);
-				cycles++;
-			}
-
-			pros::lcd::print(2, "PIDTurn End");
-			moveStop();
-		}
-
-		// think about arc motion, odometry, etc.
-		// the key thing is PID.
-		// TUNING REQUIRED!!!
-
-		/// @brief Move to a specific position using PID
-		/// @param pos Position to move to in inches (use negative for backward)
-		// TODO: Tuning required
-		void PIDMove(double pos, float reductionFactor = 2, PIDOptions options = {
-			0.19, 0.0, 0.4, 3, 6000
-		}) {
-			// TODO: Consider adding odometry wheels as the current motor encoders
-			// can be unreliable for long distances or just dont tare the motors
-			tareMotors();
-
-			pos /= inchesPerTick;
-			pos *= -1;
-
-			float error = pos;
-			float motorPos = 0;
-			float lastError = 0;
-			float derivative = 0;
-			float integral = 0;
-			float out = 0;
-
-			float maxCycles = options.timeLimit / moveDelayMs;
-			float cycles = 0;
-
-			// with moving you just wanna move both MGsat the same speed
-
-			while (true) {
-				// get avg error
-				motorPos = right_mg.get_position();
-				error = pos - motorPos;
-
-				integral += error;
-				// Anti windup
-				if (std::fabs(error) < options.errorThreshold) {
-					integral = 0;
-				}
-
-				derivative = error - lastError;
-				out = (options.kP * error) + (options.kI * integral) + (options.kD * derivative);
-				lastError = error;
-
-				out *= 1000; // convert to mV
-				out = std::clamp(out, -maxVoltage, maxVoltage);
-				out /= pidReductionFactor;
-				moveSingleVoltage(out);
-
-				if (std::fabs(error) <= options.errorThreshold) {
-					break;
-				}
-
-				pros::lcd::print(4, ("PIDMove Motor Pos: " + std::to_string(motorPos)).c_str());
-				pros::lcd::print(5, ("PIDMove Out: " + std::to_string(out)).c_str());
-				pros::lcd::print(7, ("PIDMove Error: " + std::to_string(error)).c_str());
-
-				if (cycles >= maxCycles) {
-					pros::lcd::print(4, "PIDMove Time limit reached");
-					break;
-				}
-
-				pros::delay(moveDelayMs);
-				cycles++;
-			}
-
-			moveStop();
-		}
-
-		/// @brief Gets the left motor group
-		pros::MotorGroup& getLeftMotorGroup() {
-			return left_mg;
-		}
-
-		/// @brief Gets the right motor group
-		pros::MotorGroup& getRightMotorGroup() {
-			return right_mg;
-		}		
-	}; // class Drivetrain
-
-	/// @brief Class for timer object to control timings
+	/// @brief Advanced task scheduling class with thread-safe timing capabilities
 	class Timer : public AbstractComponent {
 		private:
-			int waitTime = 20;
-
-			void sleep(int time) {
-				pros::delay(time);
-			}
+			// Time passed in milliseconds
+			std::uint32_t ms = 0;
+			int tickMs = 20;
 		protected:
+		public:
+			// Assuming 1 tick is at least 1 milliseconds, this is at least 24 hours worth of runs
+			static constexpr int INFINITE_RUNS = 86400000;
+			static constexpr int NO_RUNS = 0;
+
+			/// @brief Basic structure for a scheduled task
+			/// @param func Function to run
+			/// @param ms Time to wait for in milliseconds
+			/// @param runs Number of times to run the function (use INFINITE_RUNS for infinite)
+			struct Timeout {
+				std::function<void(Timeout& timeout)> func;
+				int ms;
+				int runs = 1;
+			};
+		private:
+			/// @brief Internal structure for a scheduled task
+			/// @param timeout Timeout object
+			/// @param nextRun Next ms time to run timeout
+			struct InternalTimeout {
+				Timeout timeout;
+				std::uint32_t nextRun;
+			};
+
+			vector<InternalTimeout> timeouts = {};
+
+			void removeExpiredTimeouts() {
+				timeouts.erase(
+					std::remove_if(timeouts.begin(), timeouts.end(),
+						[](const InternalTimeout& ito) {
+							return ito.timeout.runs <= NO_RUNS;
+						}
+					),
+					timeouts.end()
+				);
+			}
+
+			void processTimeouts() {
+				removeExpiredTimeouts();
+
+				for (InternalTimeout& ito : timeouts) {
+					ito.timeout.runs--;
+
+					if (ito.nextRun <= ms) {
+						ito.timeout.func(ito.timeout);
+					}
+					
+					ito.nextRun += ito.timeout.ms;
+				}
+			}
 		public:
 			/// @brief Args for timer object
 			/// @param abstractComponentArgs Args for AbstractComponent object
@@ -1465,17 +627,569 @@ namespace hyper {
 			/// @param args Args for timer object (see args struct for more info)
 			Timer(TimerArgs args) : 
 				AbstractComponent(args.abstractComponentArgs) {};
+			
+			/// @brief Sleep function to be used instead of pros::delay to track time for task scheduling
+			/// @param time Time in milliseconds to wait for
+			void sleep(int time) {
+				pros::delay(time);
+				ms += time;
+			}
 
-			/// @brief Gets the wait time for the timer
+			/// @brief Gets the tick wait time in milliseconds
 			/// @return Time to wait for in milliseconds
-			int getWaitTime() {
-				return waitTime;
+			int getTickMs() {
+				return tickMs;
+			}
+
+			/// @brief Setup a new timeout
+			/// @param timeout Timeout object to setup
+			void setupTimeout(Timeout timeout) {
+				std::uint32_t nextRun = ms + timeout.ms;
+				InternalTimeout ito = {timeout, nextRun};
+				timeouts.push_back(ito);
 			}
 
 			void opControl() override {
-				sleep(waitTime);
+				sleep(tickMs);
+				processTimeouts();
 			}
 	}; // class Timer
+
+	namespace Drivetrain {
+		/// @brief Struct for drivetrain motor groups
+		/// @param left Left motor group
+		/// @param right Right motor group
+		struct DriveMGs {
+			pros::MotorGroup left;
+			pros::MotorGroup right;
+
+			/// @brief Struct for drive ports
+			/// @param leftPorts Ports for left motor group
+			/// @param rightPorts Ports for right motor group
+			struct DrivePorts {
+				MGPorts leftPorts;
+				MGPorts rightPorts;
+			};
+
+			/// @brief Constructor for DriveMGs object
+			/// @param leftPorts Ports for left motor group
+			/// @param rightPorts Ports for right motor group
+			DriveMGs(DrivePorts drivePorts) : 
+				left(drivePorts.leftPorts), right(drivePorts.rightPorts) {};
+
+			/// @brief Set the voltage of the motor groups
+			/// @param leftVoltage Voltage to set the left motor group to
+			/// @param rightVoltage Voltage to set the right motor group to
+			void voltage(int leftVoltage, int rightVoltage) {
+				left.move_voltage(leftVoltage);
+				right.move_voltage(rightVoltage);
+			}
+
+			/// @brief Stop the motor groups by setting their voltage to 0
+			void stop() {
+				voltage(0, 0);
+			}
+
+			/// @brief Set the velocity of the motor groups
+			/// @param leftVel Velocity to set the left motor group to
+			/// @param rightVel Velocity to set the right motor group to
+			void velocity(int leftVel, int rightVel) {
+				left.move_velocity(leftVel);
+				right.move_velocity(rightVel);
+			}
+
+			/// @brief Move the motor groups using the motor.move() function
+			/// @param leftSpeed Speed to move the left motor group at
+			/// @param rightSpeed Speed to move the right motor group at
+			void move(int leftSpeed, int rightSpeed) {
+				left.move(leftSpeed);
+				right.move(rightSpeed);
+			}
+
+			/// @brief Tare the motor groups
+			void tare() {
+				left.tare_position();
+				right.tare_position();
+			}
+
+			/// @brief Get the average position of the motor groups (certain wires on our motor are broken so you MUST use this if you want a reliable position)
+			/// @return Average position of the motor groups
+			double position() {
+				return (left.get_position() + right.get_position()) / 2;
+			}
+		};
+
+		/// @brief Class to control autonomous PID routines for driving
+		class DrivePID {
+		private:
+			struct KValues {
+				float kP;
+				float kI;
+				float kD;
+				float threshold;
+			};
+
+			KValues kTurn = {
+				0.0, 0.0, 0.0, 1.0
+			};
+
+			KValues kMove = {
+				0.0, 0.0, 0.0, 3.0
+			};
+
+			float inchesPerTick = 1.0;
+
+			DriveMGs* mgs;
+			pros::IMU imu;
+
+			int delayMs = 20;
+
+			void calibrateIMU(bool blocking = true) {
+				imu.reset(blocking);
+				imu.tare();
+			}
+
+			double position() {
+				// Replace this with odometry wheel tracking later on
+				return mgs->position();
+			}
+		protected:
+		public:
+			struct DrivePIDArgs {
+				DriveMGs* mgs;
+				std::int8_t imuPort;
+			};
+
+			DrivePID(DrivePIDArgs args) : 
+				mgs(args.mgs),
+				imu(args.imuPort) {
+					calibrateIMU();
+				};
+
+			pros::IMU& getIMU() {
+				return imu;
+			}
+
+			// TODO: Implement PID functions (and copy over legacy code)
+
+			/// @brief Move to a specific position using PID
+			/// @param pos Position to move to in inches (use negative for backward)
+			// TODO: Tuning required
+			void lateral(double pos, float reductionFactor = 2, float timeLimit = 5000) {
+				if (pos <= 0.01) { return; }
+
+				mgs->tare();
+
+				pos /= inchesPerTick;
+
+				float error = pos;
+				float motorPos = 0;
+				float lastError = 0;
+				float derivative = 0;
+				float integral = 0;
+				float out = 0;
+
+				float maxCycles = timeLimit / delayMs;
+				float cycles = 0;
+
+				// with moving you just wanna move both MGsat the same speed
+
+				while (true) {
+					// get avg error
+					motorPos = position();
+					error = pos - motorPos;
+
+					integral += error;
+					// Anti windup
+					if (std::fabs(error) < kMove.threshold) {
+						integral = 0;
+					}
+
+					derivative = error - lastError;
+					out = (kMove.kP * error) + (kMove.kI * integral) + (kMove.kD * derivative);
+					lastError = error;
+
+					out *= 1000; // convert to mV
+					out = std::clamp(out, -MotorBounds::MILLIVOLT_MAX, MotorBounds::MILLIVOLT_MAX);
+
+					out /= reductionFactor;
+					mgs->voltage(out, out);
+
+					if (std::fabs(error) <= kMove.threshold) {
+						break;
+					}
+
+					pros::lcd::print(4, ("PIDMove Motor Pos: " + std::to_string(motorPos)).c_str());
+					pros::lcd::print(5, ("PIDMove Out: " + std::to_string(out)).c_str());
+					pros::lcd::print(7, ("PIDMove Error: " + std::to_string(error)).c_str());
+
+					if (cycles >= maxCycles) {
+						pros::lcd::print(4, "PIDMove Time limit reached");
+						break;
+					}
+
+					pros::delay(delayMs);
+					cycles++;
+				}
+
+				mgs->stop();
+			}
+
+			/// @brief Turn to a specific angle using PID
+			/// @param angle Angle to move to (PASS IN THE RANGE OF -180 TO 180 for left and right)
+			/// @param reductionFactor Factor to reduce the output by (higher value means lower speed)
+			/// @param timeLimit Time limit for the turn in milliseconds
+			void turn(double angle, float reductionFactor = 2, float timeLimit = 5000) {
+				if (angle <= 0.01) { return; }
+
+				imu.tare();
+				angle = naiveNormaliseAngle(angle);
+
+				bool anglePositive = angle > 0;
+				bool turn180 = false;
+
+				// IMU already tared so we don't need to get the current heading
+				float error = angle;
+				float lastError = 0;
+				float derivative = 0;
+				float integral = 0;
+
+				float out = 0;
+				float trueHeading = 0;
+
+				float maxThreshold = 180 - kTurn.threshold;
+
+				float maxCycles = timeLimit / delayMs;
+				float cycles = 0;
+
+				if (std::fabs(angle) >= 180) {
+					turn180 = true;
+				}
+
+				pros::lcd::print(3, "PIDTurn Start");
+
+				// with turning you just wanna move the other MG at negative of the MG of the direction
+				// which u wanna turn to
+
+				while (true) {
+					trueHeading = std::fmod((imu.get_heading() + 180), 360) - 180;
+					error = angle - trueHeading;
+
+					integral += error;
+					// Anti windup
+					if (std::fabs(error) < kTurn.threshold) {
+						integral = 0;
+					}
+
+					derivative = error - lastError;
+					out = (kTurn.kP * error) + (kTurn.kI * integral) + (kTurn.kD * derivative);
+					lastError = error;
+
+					out *= 1000; // convert to mV
+					out = std::clamp(out, -MotorBounds::MILLIVOLT_MAX, MotorBounds::MILLIVOLT_MAX);
+					out /= reductionFactor;
+
+					mgs->voltage(out, -out);
+
+					pros::lcd::print(5, ("PIDTurn Out: " + std::to_string(out)).c_str());
+					pros::lcd::print(7, ("PIDTurn Error: " + std::to_string(error)).c_str());
+					pros::lcd::print(6, ("PIDTurn True Heading: " + std::to_string(imu.get_heading())).c_str());
+
+					if (std::fabs(error) <= kTurn.threshold) {
+						break;
+					}
+
+					// 180 degree turning
+					if (std::fabs(trueHeading) >= maxThreshold) {
+						break;
+					}
+
+					if (std::fabs(out) < 100) {
+						pros::lcd::print(4, "PIDTurn Out too low");
+					}
+
+					if (cycles >= maxCycles) {
+						pros::lcd::print(4, "PIDTurn Time limit reached");
+						break;
+					}
+
+					pros::delay(delayMs);
+					cycles++;
+				}
+
+				pros::lcd::print(2, "PIDTurn End");
+				mgs->stop();
+			}
+
+			// New unified PID movement function (under development)
+			void move(float rotation, float position, float reductionFactor = 2) {
+				turn(rotation, reductionFactor);
+				lateral(position, reductionFactor);
+			}
+		}; // class DrivePID
+
+		/// @brief Class to manage drivetrain operator control
+		class DriveControl : public AbstractComponent {
+		public:
+			enum class DriveControlMode {
+				ARCADE,
+				TANK,
+				ATAC
+			};
+
+			std::function<Horizontal()> driveControl;
+
+			DriveControlMode driveControlMode;
+
+			DriveMGs* mgs;
+
+			/// @brief Args for DriveControl object
+			/// @param abstractComponentArgs Args for AbstractComponent object
+			struct DriveControlArgs {
+				AbstractComponentArgs abstractComponentArgs;
+				DriveMGs* mgs;
+			};
+
+			/// @brief Struct for different driver control speeds on arcade control
+			/// @param turnSpeed Multiplier for only turning
+			/// @param forwardBackSpeed Multiplier for only forward/backward
+			/// @param arcSpeed Multiplier of opposite turn for when turning and moving laterally at the same time
+			// (higher value means less lateral movement)
+			struct ArcadeControlSpeed {
+			private:
+				float forwardBackSpeed;
+				float maxLateral;
+			public:
+				static constexpr float controllerMax = 127;
+
+				float turnSpeed;
+				float arcSpeed;
+
+				/// @brief Sets the forward/backward speed
+				/// @param speed Speed to set the forward/backward speed to
+				// (Also prepares maxLateral for arc movement)
+				void setForwardBackSpeed(float speed, float maxTolerance = 1) {
+					forwardBackSpeed = speed;
+					maxLateral = speed * controllerMax + maxTolerance;
+				}
+
+				/// @brief Gets the forward/backward speed
+				/// @return Forward/backward speed
+				float getForwardBackSpeed() {
+					return forwardBackSpeed;
+				}
+
+				/// @brief Gets the max lateral movement
+				/// @return Max lateral movement
+				float getMaxLateral() {
+					return maxLateral;
+				}
+
+				// lower arc speed is lower turning
+
+				ArcadeControlSpeed(float turnSpeed = 1, float forwardBackSpeed = 1, float arcSpeed = 0.7) :
+					turnSpeed(turnSpeed), 
+					arcSpeed(arcSpeed) {
+						setForwardBackSpeed(forwardBackSpeed);
+				}
+			};
+
+			ArcadeControlSpeed arcadeSpeed = {};
+
+			/// @brief Speed for tank control on single side
+			/// @param base Base speed for the side
+			/// @param deadband Absolute deadband for the side
+			/// @param sigmoid Sigmoid for the side
+			struct TankSpeed {
+				float base = 1.0;
+				float deadband = 0.0;
+				Vertical sigmoid = {1.0, 1.0};
+			};
+
+			// Tank speeds for left and right sides
+			TankSpeed tankSpeeds[2] = {{}, {}};
+		private:
+			// Coefficients for turning in driver control
+			struct TurnCoefficients {
+				float left;
+				float right;
+			};
+
+			void bindDriveControl(Horizontal (DriveControl::*driveFunc)()) {
+				driveControl = std::bind(driveFunc, this);
+			}
+
+			void prepareArcadeLateral(float& lateral) {
+				// Change to negative to invert
+				lateral *= -1;
+			}
+
+			// Calculate the movement of the robot when turning and moving laterally at the same time
+			void calculateArcMovement(TurnCoefficients& turnCoeffs, float lateral, float turn, float maxLateralTolerance = 1, float arcDeadband = 30) {
+				if (std::fabs(lateral) < arcDeadband) {
+					return;
+				}
+
+				// 0-1 range of percentage of lateral movement against max possible lateral movement
+				float lateralCompensation = lateral / arcadeSpeed.getMaxLateral();
+				// Decrease the turn speed when moving laterally (higher turn should be higher turnDecrease)
+				float dynamicArcSpeed = (lateral < 0) ? arcadeSpeed.arcSpeed : 1;
+
+				float turnDecrease = 1 * turn * lateralCompensation * dynamicArcSpeed;
+
+				if (lateral > 0) {
+					turnDecrease *= turn * 0.0001;
+				}
+
+				if (turn > 0) { // Turning to right so we decrease the left MG
+					turnCoeffs.left += (lateral < 0) ? -turnDecrease : turnDecrease;
+				} else { // Turning to left so we decrease the right MG
+					turnCoeffs.right += (lateral > 0) ? -turnDecrease : turnDecrease;
+				}
+
+				pros::lcd::print(6, ("TD, dAS:, lComp: " + std::to_string(turnDecrease) + ", " + std::to_string(dynamicArcSpeed) + ", " + std::to_string(lateralCompensation)).c_str());
+			}
+
+			TurnCoefficients calculateArcadeTurns(float turn, float lateral) {
+				turn *= 1;
+
+				TurnCoefficients turnCoeffs = {turn, turn};
+
+				// Allow for arc movement
+				calculateArcMovement(turnCoeffs, lateral, turn);
+
+				return turnCoeffs;
+			}
+
+			Horizontal arcadeControl() {
+				float lateral = master->get_analog(ANALOG_LEFT_Y);    // Gets amount forward/backward from left joystick
+				float turn = master->get_analog(ANALOG_RIGHT_X);  // Gets the turn left/right from right joystick
+
+				prepareArcadeLateral(lateral);
+
+				TurnCoefficients turnCoeffs = calculateArcadeTurns(turn, lateral);
+				
+				pros::lcd::print(1, ("T, L:" + std::to_string(turn) + ", " + std::to_string(lateral)).c_str());
+
+				// Calculate speeds
+				lateral *= arcadeSpeed.getForwardBackSpeed();
+
+				turnCoeffs.left *= arcadeSpeed.turnSpeed;
+				turnCoeffs.right *= arcadeSpeed.turnSpeed;
+
+				// Ensure voltages are within correct ranges
+				float left_speed = lateral - turnCoeffs.left;
+				float right_speed = lateral + turnCoeffs.right;
+
+				pros::lcd::print(2, ("L/R COEF: " + std::to_string(turnCoeffs.left) + ", " + std::to_string(turnCoeffs.right)).c_str());
+				pros::lcd::print(7, ("LEFT/RIGHT: " + std::to_string(left_speed) + ", " + std::to_string(right_speed)).c_str());
+
+				return {left_speed, right_speed};
+			}
+
+			// Basic tank control
+			Horizontal tankControl() {
+				float left = master->get_analog(ANALOG_LEFT_Y) * tankSpeeds[0].base;
+				float right = master->get_analog(ANALOG_RIGHT_Y) * tankSpeeds[1].base;
+
+				return {left, right};
+			}
+
+			float atacSigmoid(float absSpeed, const Vertical& sigmoid) {
+				if (absSpeed < 0.5) {
+					return 0.5 * std::pow(2 * absSpeed, sigmoid.low);
+				} else {
+					return 1 - 0.5 * std::pow(2 - (2 * absSpeed), sigmoid.high);
+				}
+			}
+
+			// ATAC on individual axis (ran for each axis)
+			float atacAxis(float speed, const TankSpeed& tankSpeed) {
+				float absSpeed = std::fabs(speed);
+				// Process deadbands
+				if (absSpeed < tankSpeed.deadband) {
+					return 0;
+				}
+
+				float sign = (speed < 0) ? -1 : 1;
+				speed *= tankSpeed.base;
+				speed = atacSigmoid(absSpeed, tankSpeed.sigmoid);
+				speed *= sign;
+
+				return speed;
+			}
+
+			// Advanced Tank Action Control: Implementing all features we've ever wanted
+			Horizontal atac() {
+				float speeds[2] = {
+					master->get_analog(ANALOG_LEFT_Y),
+					master->get_analog(ANALOG_RIGHT_Y)
+				};
+			
+				int index = 0;
+				for (float& speed : speeds) {
+					// Rescale to -1 to 1 value
+					speed /= MotorBounds::MOVE_MAX;
+
+					// Process speed on one axis
+					speed = atacAxis(speed, tankSpeeds[index]);
+
+					// Rescale to -127 to 127 value
+					speed *= MotorBounds::MOVE_MAX;
+
+					index++;
+				}
+
+				return {speeds[0], speeds[1]};
+			}
+
+			// Final fallback driver control to default back to final working mode
+			Horizontal fallbackControl() {
+				return tankControl();
+			}
+
+			// REMEMBER: preparing the move speed must be done in Drivetrain class, NOT in DriveControl class
+		public:
+			/// @brief Sets the driver control mode
+			/// @param mode Mode to set the driver control to
+			void setDriveControlMode(DriveControlMode mode = DriveControlMode::TANK) {
+				driveControlMode = mode;
+
+				switch (driveControlMode) {
+					case DriveControlMode::ARCADE:
+						bindDriveControl(&DriveControl::arcadeControl);
+						break;
+					case DriveControlMode::TANK:
+						bindDriveControl(&DriveControl::tankControl);
+						break;
+					case DriveControlMode::ATAC:
+						bindDriveControl(&DriveControl::atac);
+					default:
+						bindDriveControl(&DriveControl::fallbackControl);
+						break;
+				}
+			}
+
+			/// @brief Creates DriveControl object
+			/// @param args Args for DriveControl object (check args struct for more info)
+			DriveControl(DriveControlArgs args) : 
+				AbstractComponent(args.abstractComponentArgs),
+				mgs(args.mgs) {
+					setDriveControlMode();
+				};
+
+			void opControl() override {
+				Horizontal speeds = driveControl();
+
+				speeds.left = prepareMoveSpeed(speeds.left);
+				speeds.right = prepareMoveSpeed(speeds.right);
+
+				mgs->move(speeds.left, speeds.right);
+			}
+		}; // class DriveControl
+
+		
+	} // namespace Drivetrain
 
 	/// @brief Class which manages all components
 	class ComponentManager : public AbstractComponent {
