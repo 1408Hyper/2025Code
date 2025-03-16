@@ -1,29 +1,50 @@
 // includes/usings are all in main.h
 #include "main.h"
 
-// nothing to see here, move along
-																																																																																																									#define _HYPER_UNLEASH_HELL delete this, *(reinterpret_cast<int*>(this) + 1) = 0xDEADBEEF;
 // uses ISO/C++20 standard
 // added libraries/includes:
 // pros
 
-// ending in -mech classes are for pneumatics
-
-// currently using legacy toggles (not using MechToggle class):
-// mogomech - maybe try to upgrade to MechToggle?
-
-// CONSIDER odom?
-
-// WARNING: do NOT just put "Args" as the name of an args struct in any class
-// instead, put the class name in front of it (e.g. DrivetrainArgs) for CLARITY
-// in derived functions & then for factories just do using e.g. using ArgsType = DrivetrainArgs;
-
-// for printing to brain and controller pls USE NEW LOG AND TELL FUNCS!!!
-
-// TODO: seperate PID functions into a separate class for cleanliness
-
 /// @brief Hyper namespace for all custom classes and functions
 namespace hyper {
+	// Structs
+
+	/// @brief Struct for motor group buttons (manual control)
+	/// @param fwd Button for forward
+	/// @param back Button for backward
+
+	struct Buttons {
+		pros::controller_digital_e_t fwd;
+		pros::controller_digital_e_t back;
+	};
+
+	/// @brief Struct for motor move bounds
+	struct MotorBounds {
+		static constexpr float SCALE_MIN = 0;
+		static constexpr float SCALE_MAX = 1;
+
+		static constexpr std::int32_t MOVE_MIN = -127;
+		static constexpr std::int32_t MOVE_MAX = 127;
+
+		static constexpr float MILLIVOLT_MAX = 12000;
+	};
+
+	/// @brief Base struct for any values on the horizontal axis
+	/// @param left Left side value
+	/// @param right Right side value
+	struct Horizontal {
+		float left;
+		float right;
+	};
+
+	/// @brief Vertical axis struct
+	/// @param low Low value
+	/// @param high High value
+	struct Vertical {
+		float low;
+		float high;
+	};
+
 	// Helper functions
 
 	/// @brief Convert vector of ints to string. For displaying on the LCD/debugging
@@ -130,44 +151,6 @@ namespace hyper {
 
 		return mean;
 	}
-
-	// Structs
-
-	/// @brief Struct for motor group buttons (manual control)
-	/// @param fwd Button for forward
-	/// @param back Button for backward
-
-	struct Buttons {
-		pros::controller_digital_e_t fwd;
-		pros::controller_digital_e_t back;
-	};
-
-	/// @brief Struct for motor move bounds
-	struct MotorBounds {
-		static constexpr float SCALE_MIN = 0;
-		static constexpr float SCALE_MAX = 1;
-
-		static constexpr std::int32_t MOVE_MIN = -127;
-		static constexpr std::int32_t MOVE_MAX = 127;
-
-		static constexpr float MILLIVOLT_MAX = 12000;
-	};
-
-	/// @brief Base struct for any values on the horizontal axis
-	/// @param left Left side value
-	/// @param right Right side value
-	struct Horizontal {
-		float left;
-		float right;
-	};
-
-	/// @brief Vertical axis struct
-	/// @param low Low value
-	/// @param high High value
-	struct Vertical {
-		float low;
-		float high;
-	};
 
 	// Class declarations
 
@@ -1121,9 +1104,10 @@ namespace hyper {
 
 			// Advanced Tank Action Control: Implementing all features we've ever wanted
 			Horizontal atac() {
+				// Must use static_cast to avoid narrowing conversion warning as we are working with arrays
 				float speeds[2] = {
-					master->get_analog(ANALOG_LEFT_Y),
-					master->get_analog(ANALOG_RIGHT_Y)
+					static_cast<float>(master->get_analog(ANALOG_LEFT_Y)),
+					static_cast<float>(master->get_analog(ANALOG_RIGHT_Y))
 				};
 			
 				int index = 0;
