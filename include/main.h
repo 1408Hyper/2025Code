@@ -85,13 +85,17 @@
 
 // TODO: Refactor our code into different files--main.cpp is getting too big
 
-// Using declarations to shorten common types
+// Using declarations to shorten common types and integers
 using std::vector;
 using std::string;
 using std::map;
 
 using std::unique_ptr;
 using std::shared_ptr;
+
+using std::int8_t;
+using std::int16_t;
+using std::int32_t;
 
 // Shorthands for port types & other type aliases
 using DigiPort = std::int8_t;
