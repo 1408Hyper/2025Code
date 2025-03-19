@@ -1,7 +1,7 @@
 {
   "py/object": "pros.conductor.project.Project",
   "py/state": {
-    "project_name": "2025Code",
+    "project_name": "testingATAC",
     "target": "v5",
     "templates": {
       "kernel": {
