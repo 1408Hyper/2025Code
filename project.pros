@@ -1,7 +1,7 @@
 {
   "py/object": "pros.conductor.project.Project",
   "py/state": {
-    "project_name": "testingATAC",
+    "project_name": "ATACTest",
     "target": "v5",
     "templates": {
       "kernel": {
@@ -256,7 +256,8 @@
     },
     "upload_options": {
       "description": "1408H 2025 Season Code",
-      "icon": "X"
+      "icon": "X",
+      "slot": 6
     },
     "use_early_access": false
   }
