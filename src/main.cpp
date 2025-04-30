@@ -1210,6 +1210,38 @@ namespace hyper {
 		}; // class DriveManager
 	} // namespace Drivetrain
 
+	/// @brief Class for GPS diagnostic
+	class GPSDiagnostic : public AbstractComponent {
+		private:
+		protected:
+		public:
+			const static string OUT_FILE_PATH;
+
+			/// @brief Args for GPS diagnostic object
+			/// @param abstractComponentArgs Args for AbstractComponent object
+			/// @param gpsPort Port for GPS
+			struct GPSDiagnosticArgs {
+				AbstractComponentArgs abstractComponentArgs;
+				uint8_t gpsPort;
+			};
+
+			pros::Gps gps;
+
+			std::ofstream oDiagFile(OUT_FILE_PATH);
+
+			/// @brief Creates GPS diagnostic object
+			/// @param args Args for GPS diagnostic object (check args struct for more info)
+			GPSDiagnostic(GPSDiagnosticArgs args) : 
+				AbstractComponent(args.abstractComponentArgs),
+				gps(args.gpsPort) {}
+
+			void opControl() override {
+
+			}
+	}; // class GPSDiagnostic
+
+	const string GPSDiagnostic::OUT_FILE_PATH = "/usd/gps_diag.txt";
+
 	/// @brief Class which manages all components
 	class ComponentManager : public AbstractComponent {
 	private:

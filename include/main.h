@@ -82,6 +82,8 @@
 #include <stack>
 // List
 #include <list>
+// Use file streams for file IO
+#include <fstream>
 
 // TODO: Refactor our code into different files--main.cpp is getting too big
 
@@ -93,9 +95,16 @@ using std::map;
 using std::unique_ptr;
 using std::shared_ptr;
 
+// Using declarations for all int types
+// Signed
 using std::int8_t;
 using std::int16_t;
 using std::int32_t;
+
+// Unsigned
+using std::uint8_t;
+using std::uint16_t;
+using std::uint32_t;
 
 // Shorthands for port types & other type aliases
 using DigiPort = std::int8_t;

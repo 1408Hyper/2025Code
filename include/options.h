@@ -21,9 +21,12 @@
 #define DO_POST_AUTON true
 #define DO_OP_CONTROL true
 
+// Sensor ports
+#define GPS_PORT 3
+
 // Ports for the drivetrain motors
-#define LEFT_DRIVE_PORTS {20, 19, 18}
-#define RIGHT_DRIVE_PORTS {-17, -16, -14}
+#define LEFT_DRIVE_PORTS {-20, -19, -18}
+#define RIGHT_DRIVE_PORTS {17, 16, 14}
 
 // Chassis class to use (default is initDefaultChassis)
 #define INIT_CHASSIS initDefaultChassis
