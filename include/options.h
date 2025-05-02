@@ -11,6 +11,8 @@
 // Ports for telemetry
 // IMU
 #define IMU_PORT 12
+// Rotary encoder
+#define ROT_DRIVE_PORT 2
 
 // Turn on/off auton and opcontrol
 #define DO_MATCH_AUTON false

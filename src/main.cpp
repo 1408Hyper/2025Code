@@ -704,6 +704,8 @@ namespace hyper {
 
 		/// @brief Class to control autonomous PID routines for driving
 		class DrivePID {
+		public:
+			pros::Rotation rotary;
 		private:
 			struct KValues {
 				float kP;
@@ -720,7 +722,7 @@ namespace hyper {
 				0.0, 0.0, 0.0, 3.0
 			};
 
-			float inchesPerTick = 1.0;
+			float inchesPerTick = 0.0002836;
 
 			DriveMGs* mgs;
 			pros::IMU imu;
@@ -734,19 +736,23 @@ namespace hyper {
 
 			double position() {
 				// Replace this with odometry wheel tracking later on
-				return mgs->position();
+				//return mgs->position();
+				return rotary.get_position();
 			}
 		protected:
 		public:
 			struct DrivePIDArgs {
 				DriveMGs* mgs;
 				std::int8_t imuPort;
+				uint8_t rotaryPort;
 			};
 
 			DrivePID(DrivePIDArgs args) : 
 				mgs(args.mgs),
-				imu(args.imuPort) {
+				imu(args.imuPort),
+				rotary(args.rotaryPort) {
 					calibrateIMU();
+					rotary.reset_position();
 				};
 
 			pros::IMU& getIMU() {
@@ -1124,6 +1130,8 @@ namespace hyper {
 					index++;
 				}
 
+				tell(0, "ROT LAT POS: " + std::to_string());
+
 				return {speeds[0], speeds[1]};
 			}
 
@@ -1182,6 +1190,7 @@ namespace hyper {
 			struct DriveManagerUserArgs {
 				DriveMGs::DrivePorts drivePorts;
 				DigiPort imuPort;
+				uint8_t rotaryPort;
 			};
 
 			/// @brief Args for DriveManager object
@@ -1201,7 +1210,7 @@ namespace hyper {
 			DriveManager(DriveManagerArgs args) : 
 				AbstractComponent(args.abstractComponentArgs),
 				mgs({args.user.drivePorts}),
-				pid({&mgs, args.user.imuPort}),
+				pid({&mgs, args.user.imuPort, args.user.rotaryPort}),
 				control({args.abstractComponentArgs, &mgs}) {};
 
 			void opControl() override {
@@ -1209,6 +1218,32 @@ namespace hyper {
 			}
 		}; // class DriveManager
 	} // namespace Drivetrain
+
+	/// @brief Class for GPS diagnostic
+	class GPSDiagnostic : public AbstractComponent {
+		private:
+		protected:
+		public:
+			/// @brief Args for GPS diagnostic object
+			/// @param abstractComponentArgs Args for AbstractComponent object
+			/// @param gpsPort Port for GPS
+			struct GPSDiagnosticArgs {
+				AbstractComponentArgs abstractComponentArgs;
+				uint8_t gpsPort;
+			};
+
+			pros::Gps gps;
+
+			/// @brief Creates GPS diagnostic object
+			/// @param args Args for GPS diagnostic object (check args struct for more info)
+			GPSDiagnostic(GPSDiagnosticArgs args) : 
+				AbstractComponent(args.abstractComponentArgs),
+				gps(args.gpsPort) {}
+
+			void opControl() override {
+
+			}
+	}; // class GPSDiagnostic
 
 	/// @brief Class which manages all components
 	class ComponentManager : public AbstractComponent {
@@ -1331,7 +1366,7 @@ namespace hyper {
 	class SkillsAuton : public AbstractAuton {
 	private:
 		void sector1() {
-
+			cm->drive.pid.lateral(48);
 		}
 		
 		void sector2() {
@@ -1425,7 +1460,7 @@ hyper::AbstractChassis* currentChassis;
 
 void initDefaultChassis() {
 	static hyper::Chassis defaultChassis({
-		{{{LEFT_DRIVE_PORTS, RIGHT_DRIVE_PORTS}, IMU_PORT}} // Drivetrain MGs and IMU ports
+		{{{LEFT_DRIVE_PORTS, RIGHT_DRIVE_PORTS}, IMU_PORT, ROT_DRIVE_PORT}} // Drivetrain MGs and IMU ports
 	});
 	
 	currentChassis = &defaultChassis;
