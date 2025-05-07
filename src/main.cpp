@@ -533,6 +533,17 @@ namespace hyper {
 		State getState() {
 			return state;
 		}
+	
+	pros::gps_status_s_t gpsData;
+	while (true) {
+		gpsData = gps1.get_status();
+		pros::screen::print(TEXT_MEDIUM, 1, "X Position: %3f", gpsData.x);
+		pros::screen::print(TEXT_MEDIUM, 2, "Y Position: %3f", gpsData.y);
+		pros::screen::print(TEXT_MEDIUM, 3, "Pitch: %3f", gpsData.pitch);
+		pros::screen::print(TEXT_MEDIUM, 4, "Roll: %3f", gpsData.roll);				pros::screen::print(TEXT_MEDIUM, 5, "Yaw: %3f", gpsData.yaw);
+		pros::delay(20);
+			}
+
 	}; // class BiToggle
 
 	/// @brief Advanced task scheduling class with thread-safe timing capabilities
@@ -704,6 +715,8 @@ namespace hyper {
 
 		/// @brief Class to control autonomous PID routines for driving
 		class DrivePID {
+		public:
+			pros::Rotation rotary;
 		private:
 			struct KValues {
 				float kP;
@@ -717,10 +730,12 @@ namespace hyper {
 			};
 
 			KValues kMove = {
-				0.0, 0.0, 0.0, 3.0
+				1.0, 0.0, 0.0, 3.0
 			};
 
-			float inchesPerTick = 1.0;
+			// Calcs
+			// 1. Odom Lat 0.0002836
+			float inchesPerTick = 0.0002836;
 
 			DriveMGs* mgs;
 			pros::IMU imu;
@@ -734,19 +749,23 @@ namespace hyper {
 
 			double position() {
 				// Replace this with odometry wheel tracking later on
-				return mgs->position();
+				//return mgs->position();
+				return rotary.get_position();
 			}
 		protected:
 		public:
 			struct DrivePIDArgs {
 				DriveMGs* mgs;
 				std::int8_t imuPort;
+				uint8_t rotaryPort;
 			};
 
 			DrivePID(DrivePIDArgs args) : 
 				mgs(args.mgs),
-				imu(args.imuPort) {
+				imu(args.imuPort),
+				rotary(args.rotaryPort) {
 					calibrateIMU();
+					rotary.reset_position();
 				};
 
 			pros::IMU& getIMU() {
@@ -758,7 +777,7 @@ namespace hyper {
 			/// @brief Move to a specific position using PID
 			/// @param pos Position to move to in inches (use negative for backward)
 			// TODO: Tuning required
-			void lateral(double pos, float reductionFactor = 2, float timeLimit = 5000) {
+			void lateral(double pos, float reductionFactor = 6, float timeLimit = 5000) {
 				if (pos <= 0.01) { return; }
 
 				mgs->tare();
@@ -1124,19 +1143,21 @@ namespace hyper {
 					index++;
 				}
 
+				//pros::lcd::print(0, ("ROT LAT POS: " + std::to_string(rot.get_position())).c_str());
+
 				return {speeds[0], speeds[1]};
 			}
 
 			// Final fallback driver control to default back to final working mode
 			Horizontal fallbackControl() {
-				return tankControl();
+				return atac();
 			}
 
 			// REMEMBER: preparing the move speed must be done in Drivetrain class, NOT in DriveControl class
 		public:
 			/// @brief Sets the driver control mode
 			/// @param mode Mode to set the driver control to
-			void setDriveControlMode(DriveControlMode mode = DriveControlMode::TANK) {
+			void setDriveControlMode(DriveControlMode mode = DriveControlMode::ATAC) {
 				driveControlMode = mode;
 
 				switch (driveControlMode) {
@@ -1182,6 +1203,7 @@ namespace hyper {
 			struct DriveManagerUserArgs {
 				DriveMGs::DrivePorts drivePorts;
 				DigiPort imuPort;
+				uint8_t rotaryPort;
 			};
 
 			/// @brief Args for DriveManager object
@@ -1201,7 +1223,7 @@ namespace hyper {
 			DriveManager(DriveManagerArgs args) : 
 				AbstractComponent(args.abstractComponentArgs),
 				mgs({args.user.drivePorts}),
-				pid({&mgs, args.user.imuPort}),
+				pid({&mgs, args.user.imuPort, args.user.rotaryPort}),
 				control({args.abstractComponentArgs, &mgs}) {};
 
 			void opControl() override {
@@ -1215,8 +1237,6 @@ namespace hyper {
 		private:
 		protected:
 		public:
-			const static string OUT_FILE_PATH;
-
 			/// @brief Args for GPS diagnostic object
 			/// @param abstractComponentArgs Args for AbstractComponent object
 			/// @param gpsPort Port for GPS
@@ -1226,8 +1246,6 @@ namespace hyper {
 			};
 
 			pros::Gps gps;
-
-			std::ofstream oDiagFile(OUT_FILE_PATH);
 
 			/// @brief Creates GPS diagnostic object
 			/// @param args Args for GPS diagnostic object (check args struct for more info)
@@ -1239,8 +1257,6 @@ namespace hyper {
 
 			}
 	}; // class GPSDiagnostic
-
-	const string GPSDiagnostic::OUT_FILE_PATH = "/usd/gps_diag.txt";
 
 	/// @brief Class which manages all components
 	class ComponentManager : public AbstractComponent {
@@ -1363,7 +1379,7 @@ namespace hyper {
 	class SkillsAuton : public AbstractAuton {
 	private:
 		void sector1() {
-
+			cm->drive.pid.lateral(48);
 		}
 		
 		void sector2() {
@@ -1457,7 +1473,7 @@ hyper::AbstractChassis* currentChassis;
 
 void initDefaultChassis() {
 	static hyper::Chassis defaultChassis({
-		{{{LEFT_DRIVE_PORTS, RIGHT_DRIVE_PORTS}, IMU_PORT}} // Drivetrain MGs and IMU ports
+		{{{LEFT_DRIVE_PORTS, RIGHT_DRIVE_PORTS}, IMU_PORT, ROT_DRIVE_PORT}} // Drivetrain MGs and IMU ports
 	});
 	
 	currentChassis = &defaultChassis;
@@ -1478,6 +1494,8 @@ void competition_initialize() {
 }
 
 void autonomous() {
+	pros::lcd::set_text(1, "> 1408Hyper autonomous ready");
+
 	if (DO_MATCH_AUTON) {
 		currentChassis->auton();
 	} else if (DO_SKILLS_AUTON) {
