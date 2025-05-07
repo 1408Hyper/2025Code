@@ -639,12 +639,18 @@ namespace hyper {
 	}; // class Timer
 
 	namespace Drivetrain {
-		/// @brief Struct for drivetrain motor groups
-		/// @param left Left motor group
-		/// @param right Right motor group
-		struct DriveMGs {
+		/// @brief Struct for drivetrain IO
+		struct DriveIO {
+			// Drivetrain motor groups lef/right
 			pros::MotorGroup left;
 			pros::MotorGroup right;
+
+			// Lateral and turning rotary sensors
+			pros::Rotation lRot;
+			pros::Rotation tRot;
+
+			// IMU
+			pros::IMU imu;
 
 			/// @brief Struct for drive ports
 			/// @param leftPorts Ports for left motor group
@@ -652,13 +658,18 @@ namespace hyper {
 			struct DrivePorts {
 				MGPorts leftPorts;
 				MGPorts rightPorts;
+				int8_t imuPort;
+				uint8_t lRotPort;
+				uint8_t tRotPort;
 			};
 
 			/// @brief Constructor for DriveMGs object
 			/// @param leftPorts Ports for left motor group
 			/// @param rightPorts Ports for right motor group
-			DriveMGs(DrivePorts drivePorts) : 
-				left(drivePorts.leftPorts), right(drivePorts.rightPorts) {};
+			DriveIO(DrivePorts drivePorts) : 
+				left(drivePorts.leftPorts), right(drivePorts.rightPorts),
+				imu(drivePorts.imuPort),
+				lRot(drivePorts.lRotPort), tRot(drivePorts.tRotPort) {};
 
 			/// @brief Set the voltage of the motor groups
 			/// @param leftVoltage Voltage to set the left motor group to
@@ -705,7 +716,6 @@ namespace hyper {
 		/// @brief Class to control autonomous PID routines for driving
 		class DrivePID {
 		public:
-			pros::Rotation rotary;
 		private:
 			struct KValues {
 				float kP;
@@ -724,8 +734,7 @@ namespace hyper {
 
 			float inchesPerTick = 0.0002836;
 
-			DriveMGs* mgs;
-			pros::IMU imu;
+			DriveIO* dio;
 
 			int delayMs = 20;
 
@@ -742,17 +751,14 @@ namespace hyper {
 		protected:
 		public:
 			struct DrivePIDArgs {
-				DriveMGs* mgs;
+				DriveIO* dio;
 				std::int8_t imuPort;
 				uint8_t rotaryPort;
 			};
 
 			DrivePID(DrivePIDArgs args) : 
-				mgs(args.mgs),
-				imu(args.imuPort),
-				rotary(args.rotaryPort) {
-					calibrateIMU();
-					rotary.reset_position();
+				dio(args.dio) {
+
 				};
 
 			pros::IMU& getIMU() {
