@@ -708,8 +708,15 @@ namespace hyper {
 
 			/// @brief Get the average position of the motor groups (certain wires on our motor are broken so you MUST use this if you want a reliable position)
 			/// @return Average position of the motor groups
-			double position() {
+			double positionMG() {
 				return (left.get_position() + right.get_position()) / 2;
+			}
+
+			/// @brief Get the average velocity of the motor groups (certain wires on our motor are broken so you MUST use this if you want a reliable velocity)
+			/// @param blocking Whether to block IMU during calibration
+			void calibrateIMU(bool blocking = true) {
+				imu.reset(blocking);
+				imu.tare();
 			}
 		};
 
@@ -717,63 +724,46 @@ namespace hyper {
 		class DrivePID {
 		public:
 		private:
+
+
+			DriveIO* dio;
+
+			int delayMs = 20;
+		protected:
+			public:
 			struct KValues {
 				float kP;
 				float kI;
 				float kD;
 				float threshold;
 			};
-
-			KValues kTurn = {
-				0.0, 0.0, 0.0, 1.0
+			
+			static inline const KValues kTurn = {
+				1.0, 0.0, 0.0, 1.0
 			};
 
-			KValues kMove = {
-				0.0, 0.0, 0.0, 3.0
+			static inline const KValues kMove = {
+				1.0, 0.0, 0.4, 3.0
 			};
 
-			float inchesPerTick = 0.0002836;
+			static constexpr float inchesPerTick = 0.0002836;
 
-			DriveIO* dio;
-
-			int delayMs = 20;
-
-			void calibrateIMU(bool blocking = true) {
-				imu.reset(blocking);
-				imu.tare();
-			}
-
-			double position() {
-				// Replace this with odometry wheel tracking later on
-				//return mgs->position();
-				return rotary.get_position();
-			}
-		protected:
-		public:
 			struct DrivePIDArgs {
 				DriveIO* dio;
-				std::int8_t imuPort;
-				uint8_t rotaryPort;
 			};
 
 			DrivePID(DrivePIDArgs args) : 
-				dio(args.dio) {
-
-				};
-
-			pros::IMU& getIMU() {
-				return imu;
-			}
+				dio(args.dio) {};
 
 			// TODO: Implement PID functions (and copy over legacy code)
 
 			/// @brief Move to a specific position using PID
 			/// @param pos Position to move to in inches (use negative for backward)
 			// TODO: Tuning required
-			void lateral(double pos, float reductionFactor = 2, float timeLimit = 5000) {
+			void lateral(double pos, float reductionFactor = 2, float timeLimit = 5000, const KValues& kv = DrivePID::kMove) {
 				if (pos <= 0.01) { return; }
-
-				mgs->tare();
+				
+				dio->tare();
 
 				pos /= inchesPerTick;
 
@@ -791,26 +781,26 @@ namespace hyper {
 
 				while (true) {
 					// get avg error
-					motorPos = position();
+					motorPos = dio->lRot.get_position();
 					error = pos - motorPos;
 
 					integral += error;
 					// Anti windup
-					if (std::fabs(error) < kMove.threshold) {
+					if (std::fabs(error) < kv.threshold) {
 						integral = 0;
 					}
 
 					derivative = error - lastError;
-					out = (kMove.kP * error) + (kMove.kI * integral) + (kMove.kD * derivative);
+					out = (kv.kP * error) + (kv.kI * integral) + (kv.kD * derivative);
 					lastError = error;
 
 					out *= 1000; // convert to mV
 					out = std::clamp(out, -MotorBounds::MILLIVOLT_MAX, MotorBounds::MILLIVOLT_MAX);
 
 					out /= reductionFactor;
-					mgs->voltage(out, out);
+					dio->voltage(out, out);
 
-					if (std::fabs(error) <= kMove.threshold) {
+					if (std::fabs(error) <= kv.threshold) {
 						break;
 					}
 
@@ -827,17 +817,17 @@ namespace hyper {
 					cycles++;
 				}
 
-				mgs->stop();
+				dio->stop();
 			}
 
 			/// @brief Turn to a specific angle using PID
 			/// @param angle Angle to move to (PASS IN THE RANGE OF -180 TO 180 for left and right)
 			/// @param reductionFactor Factor to reduce the output by (higher value means lower speed)
 			/// @param timeLimit Time limit for the turn in milliseconds
-			void turn(double angle, float reductionFactor = 2, float timeLimit = 5000) {
+			void turn(double angle, float reductionFactor = 2, float timeLimit = 5000, const KValues& kv = DrivePID::kTurn) {
 				if (angle <= 0.01) { return; }
 
-				imu.tare();
+				dio->imu.tare();
 				angle = naiveNormaliseAngle(angle);
 
 				bool anglePositive = angle > 0;
@@ -852,7 +842,7 @@ namespace hyper {
 				float out = 0;
 				float trueHeading = 0;
 
-				float maxThreshold = 180 - kTurn.threshold;
+				float maxThreshold = 180 - kv.threshold;
 
 				float maxCycles = timeLimit / delayMs;
 				float cycles = 0;
@@ -867,30 +857,30 @@ namespace hyper {
 				// which u wanna turn to
 
 				while (true) {
-					trueHeading = std::fmod((imu.get_heading() + 180), 360) - 180;
+					trueHeading = std::fmod((dio->imu.get_heading() + 180), 360) - 180;
 					error = angle - trueHeading;
 
 					integral += error;
 					// Anti windup
-					if (std::fabs(error) < kTurn.threshold) {
+					if (std::fabs(error) < kv.threshold) {
 						integral = 0;
 					}
 
 					derivative = error - lastError;
-					out = (kTurn.kP * error) + (kTurn.kI * integral) + (kTurn.kD * derivative);
+					out = (kv.kP * error) + (kv.kI * integral) + (kv.kD * derivative);
 					lastError = error;
 
 					out *= 1000; // convert to mV
 					out = std::clamp(out, -MotorBounds::MILLIVOLT_MAX, MotorBounds::MILLIVOLT_MAX);
 					out /= reductionFactor;
 
-					mgs->voltage(out, -out);
+					dio->voltage(out, -out);
 
 					pros::lcd::print(5, ("PIDTurn Out: " + std::to_string(out)).c_str());
 					pros::lcd::print(7, ("PIDTurn Error: " + std::to_string(error)).c_str());
-					pros::lcd::print(6, ("PIDTurn True Heading: " + std::to_string(imu.get_heading())).c_str());
+					pros::lcd::print(6, ("PIDTurn True Heading: " + std::to_string(dio->imu.get_heading())).c_str());
 
-					if (std::fabs(error) <= kTurn.threshold) {
+					if (std::fabs(error) <= kv.threshold) {
 						break;
 					}
 
@@ -913,7 +903,7 @@ namespace hyper {
 				}
 
 				pros::lcd::print(2, "PIDTurn End");
-				mgs->stop();
+				dio->stop();
 			}
 
 			// New unified PID movement function (under development)
@@ -936,13 +926,13 @@ namespace hyper {
 
 			DriveControlMode driveControlMode;
 
-			DriveMGs* mgs;
+			DriveIO* dio;
 
 			/// @brief Args for DriveControl object
 			/// @param abstractComponentArgs Args for AbstractComponent object
 			struct DriveControlArgs {
 				AbstractComponentArgs abstractComponentArgs;
-				DriveMGs* mgs;
+				DriveIO* dio;
 			};
 
 			/// @brief Struct for different driver control speeds on arcade control
@@ -1136,7 +1126,7 @@ namespace hyper {
 					index++;
 				}
 
-				tell(0, "ROT LAT POS: " + std::to_string());
+				//tell(0, "ROT LAT POS: " + std::to_string());
 
 				return {speeds[0], speeds[1]};
 			}
@@ -1150,7 +1140,7 @@ namespace hyper {
 		public:
 			/// @brief Sets the driver control mode
 			/// @param mode Mode to set the driver control to
-			void setDriveControlMode(DriveControlMode mode = DriveControlMode::TANK) {
+			void setDriveControlMode(DriveControlMode mode = DriveControlMode::ATAC) {
 				driveControlMode = mode;
 
 				switch (driveControlMode) {
@@ -1172,7 +1162,7 @@ namespace hyper {
 			/// @param args Args for DriveControl object (check args struct for more info)
 			DriveControl(DriveControlArgs args) : 
 				AbstractComponent(args.abstractComponentArgs),
-				mgs(args.mgs) {
+				dio(args.dio) {
 					setDriveControlMode();
 				};
 
@@ -1182,7 +1172,7 @@ namespace hyper {
 				speeds.left = prepareMoveSpeed(speeds.left);
 				speeds.right = prepareMoveSpeed(speeds.right);
 
-				mgs->move(speeds.left, speeds.right);
+				dio->move(speeds.left, speeds.right);
 			}
 		}; // class DriveControl
 
@@ -1194,9 +1184,7 @@ namespace hyper {
 			/// @param drivePorts Ports for drivetrain
 			/// @param imuPort Port for IMU
 			struct DriveManagerUserArgs {
-				DriveMGs::DrivePorts drivePorts;
-				DigiPort imuPort;
-				uint8_t rotaryPort;
+				DriveIO::DrivePorts drivePorts;
 			};
 
 			/// @brief Args for DriveManager object
@@ -1207,7 +1195,7 @@ namespace hyper {
 				DriveManagerUserArgs user;
 			};
 
-			DriveMGs mgs;
+			DriveIO dio;
 			DrivePID pid;
 			DriveControl control;
 
@@ -1215,9 +1203,9 @@ namespace hyper {
 			/// @param args Args for DriveManager object (check args struct for more info)
 			DriveManager(DriveManagerArgs args) : 
 				AbstractComponent(args.abstractComponentArgs),
-				mgs({args.user.drivePorts}),
-				pid({&mgs, args.user.imuPort, args.user.rotaryPort}),
-				control({args.abstractComponentArgs, &mgs}) {};
+				dio({args.user.drivePorts}),
+				pid({&dio}),
+				control({args.abstractComponentArgs, &dio}) {};
 
 			void opControl() override {
 				control.opControl();
@@ -1227,28 +1215,28 @@ namespace hyper {
 
 	/// @brief Class for GPS diagnostic
 	class GPSDiagnostic : public AbstractComponent {
-		private:
-		protected:
-		public:
-			/// @brief Args for GPS diagnostic object
-			/// @param abstractComponentArgs Args for AbstractComponent object
-			/// @param gpsPort Port for GPS
-			struct GPSDiagnosticArgs {
-				AbstractComponentArgs abstractComponentArgs;
-				uint8_t gpsPort;
-			};
+	private:
+	protected:
+	public:
+		/// @brief Args for GPS diagnostic object
+		/// @param abstractComponentArgs Args for AbstractComponent object
+		/// @param gpsPort Port for GPS
+		struct GPSDiagnosticArgs {
+			AbstractComponentArgs abstractComponentArgs;
+			uint8_t gpsPort;
+		};
 
-			pros::Gps gps;
+		pros::Gps gps;
 
-			/// @brief Creates GPS diagnostic object
-			/// @param args Args for GPS diagnostic object (check args struct for more info)
-			GPSDiagnostic(GPSDiagnosticArgs args) : 
-				AbstractComponent(args.abstractComponentArgs),
-				gps(args.gpsPort) {}
+		/// @brief Creates GPS diagnostic object
+		/// @param args Args for GPS diagnostic object (check args struct for more info)
+		GPSDiagnostic(GPSDiagnosticArgs args) : 
+			AbstractComponent(args.abstractComponentArgs),
+			gps(args.gpsPort) {}
 
-			void opControl() override {
+		void opControl() override {
 
-			}
+		}
 	}; // class GPSDiagnostic
 
 	/// @brief Class which manages all components
@@ -1466,7 +1454,7 @@ hyper::AbstractChassis* currentChassis;
 
 void initDefaultChassis() {
 	static hyper::Chassis defaultChassis({
-		{{{LEFT_DRIVE_PORTS, RIGHT_DRIVE_PORTS}, IMU_PORT, ROT_DRIVE_PORT}} // Drivetrain MGs and IMU ports
+		{{{LEFT_DRIVE_PORTS, RIGHT_DRIVE_PORTS, IMU_PORT, ROT_DRIVE_PORT}}} // Drivetrain MGs and IMU ports
 	});
 	
 	currentChassis = &defaultChassis;
@@ -1542,4 +1530,4 @@ void opcontrol() {
 // i like c++ the most
 
 // anti quick make nothing comment thingy
-// aaaaa
+// aaaaaaa
