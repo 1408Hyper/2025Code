@@ -725,7 +725,6 @@ namespace hyper {
 		public:
 		private:
 
-
 			DriveIO* dio;
 
 			int delayMs = 20;
