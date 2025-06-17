@@ -1,0 +1,10 @@
+{
+    "auton" : {
+        "events" : [
+            {
+                "type" : "dvt:lateral",
+                "dist" : 150
+            }
+        ]
+    }
+}

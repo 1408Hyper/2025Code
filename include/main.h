@@ -38,6 +38,9 @@
 
 // Includes
 //#include "okapi/api.hpp"
+
+// C++20 Standard library includes
+
 // Vectors to contain data
 #include <vector>
 // Strings for better char arrays
@@ -83,6 +86,11 @@
 // List
 #include <list>
 
+// Third party includes
+
+// nlohmann/json for JSON parsing
+#include "nlohmann/json.hpp"
+
 // TODO: Refactor our code into different files--main.cpp is getting too big
 
 // Using declarations to shorten common types and integers
@@ -105,6 +113,9 @@ using AnalogPort = char;
 using VoidFunc = std::function<void()>;
 using VoidFuncVector = vector<VoidFunc>;
 
+using nlohmann::json;  // JSON library for parsing and serialization
+
+// Options file with ports, config, etc
 #include "options.h"
 
 /**
