@@ -8,15 +8,21 @@
 // Main opcontrol function to use
 #define CURRENT_OPCONTROL mainControl
 
+//Sensor ports 
+
 // Ports for telemetry
 // IMU
 #define IMU_PORT 12
 // Rotary encoder
 #define ROT_DRIVE_PORT 2
+// AI Vision
+#define AI_VISION_PORT 3
+// GPS Port
+#define GPS_PORT 4
 
 // Turn on/off auton and opcontrol
 #define DO_MATCH_AUTON false
-#define DO_SKILLS_AUTON false
+#define DO_SKILLS_AUTON true
 
 // Turn on for skills prep/post auton/opcontrol functions to be run on components
 #define DO_SKILLS_PREP true
