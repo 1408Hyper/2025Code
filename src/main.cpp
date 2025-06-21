@@ -1130,7 +1130,7 @@ namespace hyper {
 					index++;
 				}
 
-				tell(0, "ROT LAT POS: " + std::to_string());
+				//tell(0, "ROT LAT POS: " + std::to_string());
 
 				return {speeds[0], speeds[1]};
 			}
@@ -1481,11 +1481,11 @@ void competition_initialize() {
 }
 
 void autonomous() {
-	if (DO_MATCH_AUTON) {
+	#if DO_MATCH_AUTON
 		currentChassis->auton();
-	} else if (DO_SKILLS_AUTON) {
+	#elif DO_SKILLS_AUTON
 		currentChassis->skillsAuton();
-	}
+	#endif
 }
 
 void preControl() {
@@ -1498,14 +1498,15 @@ void preControl() {
 		autonomous();
 	}
 
-	if (DO_SKILLS_PREP) {
+	#if DO_SKILLS_PREP
 		currentChassis->skillsPrep();
-	}
+	#endif
 
 	// only do post auton if we are not in skills prep
-	if (DO_POST_AUTON) {
+	// 2025: What the hell does this comment even mean?
+	#if DO_POST_AUTON
 		currentChassis->postAuton();
-	}
+	#endif
 }
 
 void mainloopControl() {
