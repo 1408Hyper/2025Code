@@ -49,7 +49,7 @@
 #include <initializer_list>
 // Streams for better IO
 #include <sstream>
-// Memory management
+// Memory management with smart pointers
 #include <memory>
 // Perfect forwarding; pairs
 #include <utility>
@@ -85,6 +85,10 @@
 #include <stack>
 // List
 #include <list>
+// Unordered map
+#include <unordered_map>
+// Type indexes and IDs
+#include <typeindex>
 
 // Third party includes
 

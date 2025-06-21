@@ -1466,11 +1466,11 @@ void initialize() {
 }
 
 void disabled() {
-
+	// when robot is paused
 }
 
 void competition_initialize() {
-
+	// addiitonal initialization for competition mode
 }
 
 void autonomous() {
@@ -1496,7 +1496,7 @@ void preControl() {
 	#endif
 
 	// only do post auton if we are not in skills prep
-	// 2025: What the hell does this comment even mean?
+	// 21/06/2025: What the hell does this comment even mean?
 	#if DO_POST_AUTON
 		currentChassis->postAuton();
 	#endif
