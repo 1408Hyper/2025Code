@@ -154,18 +154,52 @@ namespace hyper {
 
 	// Class declarations
 
+	/// @brief Abstract chassis class for if you want a custom chassis class
+	class AbstractChassis {
+	private:
+	protected:
+		pros::Controller master{pros::E_CONTROLLER_MASTER};
+	public:
+		/// @brief Creates abstract chassis object
+		AbstractChassis() {};
+
+		virtual ~AbstractChassis() = default;
+
+		/// @brief Gets the controller
+		pros::Controller& getController() {
+			return master;
+		}
+
+		virtual void opControl() = 0;
+		virtual void auton() = 0;
+		virtual void skillsPrep() = 0;
+		virtual void skillsAuton() = 0;
+		virtual void postAuton() = 0;
+	}; // class AbstractChassis
+
 	/// @brief Class for components of the chassis to derive from
 	class AbstractComponent {
 	private:
 	protected:
-		unique_ptr<pros::Controller> master = std::make_unique<pros::Controller>(pros::E_CONTROLLER_MASTER);
+		AbstractChassis* chassis;
+
+		pros::Controller* master;
 	public:
 		static constexpr std::uint8_t MAX_BRAIN_LINES = 8;
 		static constexpr std::uint8_t MAX_CONTROLLER_LINES = 2;
 		static constexpr std::uint8_t CONTROLLER_TXT_START_COL = 0;
 
+		/// @brief Args for AbstractComponent object
+		/// @param chassis AbstractChassis derived object to be used for the component
+		struct AbstractComponentArgs {
+			AbstractChassis* chassis;
+		};
+
 		/// @brief Creates AbstractComponent object
-		AbstractComponent() {};
+		/// @param args Args AbstractComponent object (check args struct for more info)
+		AbstractComponent(AbstractComponentArgs args) : 
+		chassis(args.chassis),
+		master(&args.chassis->getController()) {};
 
 		/// @brief Log something to the brain safely
 		/// @param line Line to print the message on (check class consts for max lines)
@@ -197,11 +231,13 @@ namespace hyper {
 			return true;
 		}
 
-		pros::Controller* getMaster() {
-			return master.get();
+		AbstractChassis& getChassis() {
+			return *chassis;
 		}
 
-
+		pros::Controller& getMaster() {
+			return *master;
+		}
 
 		virtual void opControl() = 0;
 
@@ -210,26 +246,6 @@ namespace hyper {
 
 		virtual ~AbstractComponent() = default;
 	}; // class ChassisComponent
-
-	/// @brief Abstract chassis class for if you want a custom chassis class
-	class AbstractChassis {
-	private:
-	public:
-		using ComponentMap = std::unordered_map<std::type_index, std::unordered_map<std::string, AbstractComponent*>>;
-	protected:
-		ComponentMap cm = {};
-	public:
-		/// @brief Creates abstract chassis object
-		AbstractChassis() {};
-
-		virtual ~AbstractChassis() = default;
-
-		virtual void opControl() = 0;
-		virtual void auton() = 0;
-		virtual void skillsPrep() = 0;
-		virtual void skillsAuton() = 0;
-		virtual void postAuton() = 0;
-	}; // class AbstractChassis
 
 	class AbstractMech : public AbstractComponent {
 	private:
