@@ -20,6 +20,17 @@
 // GPS Port
 #define GPS_PORT 4
 
+// MOTORS: BOT, MID, TOP: 10, 17, 11
+
+// (Intake) R1: reverse spin BOT and MID
+// (Bot Goal) R2: reverse spin MID and reverse spin BOT
+// (Mid Goal) L2: reverse spin MID and normal spin BOT
+// (Top Goal) L1: reverse spin MID and normal spin BOT and reverse spin TOP
+
+#define BOT_PORTS {10}
+#define MID_PORTS {17}
+#define TOP_PORTS {11}
+
 // Turn on/off auton and opcontrol
 #define DO_MATCH_AUTON false
 #define DO_SKILLS_AUTON false
@@ -29,9 +40,8 @@
 #define DO_POST_AUTON true
 #define DO_OP_CONTROL true
 
-// Ports for the drivetrain motors
-#define LEFT_DRIVE_PORTS {20, 19, 18}
-#define RIGHT_DRIVE_PORTS {-17, -16, -14}
+#define LEFT_DRIVE_PORTS {18, 8, 21}
+#define RIGHT_DRIVE_PORTS {15, 14, 13}
 
 // Chassis class to use (default is initDefaultChassis)
 #define INIT_CHASSIS initDefaultChassis

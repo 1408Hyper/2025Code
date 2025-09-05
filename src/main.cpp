@@ -1238,6 +1238,58 @@ namespace hyper {
 		}
 	}; // class GPSDiagnostic
 
+	class Holder : public AbstractComponent {
+	private:
+		// 4
+		pros::MotorGroup mgs
+
+		void handleTopGoal() {
+
+		}
+
+		void handleMidGoal() {
+
+		}
+
+		void handleBottomGoal() {
+
+		}
+
+		void handleMidGoal() {
+			
+		}
+
+		void handleStop() {
+
+		}
+	protected:
+	public:
+		/// @brief Args for holder object
+		/// @param abstractComponentArgs Args for AbstractComponent object
+		struct HolderArgs {
+			AbstractComponentArgs abstractComponentArgs;
+		};
+
+		/// @brief Creates holder object
+		/// @param args Args for holder object (check args struct for more info)
+		Holder(HolderArgs args) : 
+			AbstractComponent(args.abstractComponentArgs) {};
+
+		void opControl() override {
+			if (master->get_digital(pros::E_CONTROLLER_DIGITAL_L1)) {
+				handleTopGoal();
+			} else if (master->get_digital(pros::E_CONTROLLER_DIGITAL_L2)) {
+				handleMidGoal();
+			} else if (master->get_digital(pros::E_CONTROLLER_DIGITAL_R1)) {
+				handleIntake();
+			} else if (master->get_digital(pros::E_CONTROLLER_DIGITAL_R2)) {
+				handleBottomGoal();
+			} else {
+				handleStop();
+			}
+		}
+	}; // class Holder
+
 	/// @brief Class which manages all components
 	class ComponentManager : public AbstractComponent {
 	private:
