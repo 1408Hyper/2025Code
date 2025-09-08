@@ -1005,7 +1005,7 @@ namespace hyper {
 
 			void prepareArcadeLateral(float& lateral) {
 				// Change to negative to invert
-				lateral *= -1;
+				lateral *= 1;
 			}
 
 			// Calculate the movement of the robot when turning and moving laterally at the same time
@@ -1139,7 +1139,7 @@ namespace hyper {
 		public:
 			/// @brief Sets the driver control mode
 			/// @param mode Mode to set the driver control to
-			void setDriveControlMode(DriveControlMode mode = DriveControlMode::ATAC) {
+			void setDriveControlMode(DriveControlMode mode = DriveControlMode::ARCADE) {
 				driveControlMode = mode;
 
 				switch (driveControlMode) {
@@ -1240,8 +1240,8 @@ namespace hyper {
 
 	class Holder : public AbstractComponent {
 	private:
-		// 4
-		pros::MotorGroup mgs
+		// Replaced individual motor groups with an array for indexed access
+		std::array<pros::MotorGroup, 3> motorGroupArray;
 
 		void handleTopGoal() {
 
@@ -1255,25 +1255,48 @@ namespace hyper {
 
 		}
 
-		void handleMidGoal() {
+		void handleIntake() {
 			
 		}
 
 		void handleStop() {
-
+			for (pros::MotorGroup& mg : motorGroupArray) {
+				mg.move(0);
+			}
 		}
 	protected:
 	public:
+		// Enum to index motorGroupArray
+		enum class MotorID : std::size_t {
+			BOTTOM = 0,
+			MID = 1,
+			TOP = 2
+		};
+
 		/// @brief Args for holder object
 		/// @param abstractComponentArgs Args for AbstractComponent object
 		struct HolderArgs {
 			AbstractComponentArgs abstractComponentArgs;
+			MGPorts bottomPorts;
+			MGPorts midPorts;
+			MGPorts topPorts;
 		};
 
 		/// @brief Creates holder object
 		/// @param args Args for holder object (check args struct for more info)
 		Holder(HolderArgs args) : 
-			AbstractComponent(args.abstractComponentArgs) {};
+			AbstractComponent(args.abstractComponentArgs),
+			// Initialize array elements with the provided port groups
+			motorGroupArray{
+				pros::MotorGroup(args.bottomPorts),
+				pros::MotorGroup(args.midPorts),
+				pros::MotorGroup(args.topPorts)
+			} {};
+
+		// Optional convenience accessor to reference by MotorID without casting at callsite
+		pros::MotorGroup& getMotorGroup(MotorID id) {
+			return motorGroupArray[static_cast<std::size_t>(id)];
+		}
 
 		void opControl() override {
 			if (master->get_digital(pros::E_CONTROLLER_DIGITAL_L1)) {

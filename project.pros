@@ -1,7 +1,7 @@
 {
   "py/object": "pros.conductor.project.Project",
   "py/state": {
-    "project_name": "ATACTest",
+    "project_name": "Arcade25",
     "target": "v5",
     "templates": {
       "kernel": {
@@ -257,7 +257,7 @@
     "upload_options": {
       "description": "1408H 2025 Season Code",
       "icon": "X",
-      "slot": 6
+      "slot": 2
     },
     "use_early_access": false
   }
