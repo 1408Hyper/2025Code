@@ -1239,12 +1239,19 @@ namespace hyper {
 	}; // class GPSDiagnostic
 
 	class Holder : public AbstractComponent {
+	public:
+		// Struct to index motorGroupArray
+		struct MotorID {
+			const static uint8_t BOTTOM = 0;
+			const static uint8_t MID = 1;
+			const static uint8_t TOP = 2;
+		};
 	private:
 		// Replaced individual motor groups with an array for indexed access
-		std::array<pros::MotorGroup, 3> motorGroupArray;
+		std::array<pros::MotorGroup, 3> mgs;
 
 		void handleTopGoal() {
-
+			
 		}
 
 		void handleMidGoal() {
@@ -1252,27 +1259,22 @@ namespace hyper {
 		}
 
 		void handleBottomGoal() {
-
+			mgs[MotorID::BOTTOM].move(127);
+			mgs[MotorID::MID].move(127);
 		}
 
 		void handleIntake() {
-			
+			mgs[MotorID::BOTTOM].move(-127);
+			mgs[MotorID::MID].move(-127);
 		}
 
 		void handleStop() {
-			for (pros::MotorGroup& mg : motorGroupArray) {
+			for (pros::MotorGroup& mg : mgs) {
 				mg.move(0);
 			}
 		}
 	protected:
 	public:
-		// Enum to index motorGroupArray
-		enum class MotorID : std::size_t {
-			BOTTOM = 0,
-			MID = 1,
-			TOP = 2
-		};
-
 		/// @brief Args for holder object
 		/// @param abstractComponentArgs Args for AbstractComponent object
 		struct HolderArgs {
@@ -1287,16 +1289,11 @@ namespace hyper {
 		Holder(HolderArgs args) : 
 			AbstractComponent(args.abstractComponentArgs),
 			// Initialize array elements with the provided port groups
-			motorGroupArray{
+			mgs{
 				pros::MotorGroup(args.bottomPorts),
 				pros::MotorGroup(args.midPorts),
 				pros::MotorGroup(args.topPorts)
 			} {};
-
-		// Optional convenience accessor to reference by MotorID without casting at callsite
-		pros::MotorGroup& getMotorGroup(MotorID id) {
-			return motorGroupArray[static_cast<std::size_t>(id)];
-		}
 
 		void opControl() override {
 			if (master->get_digital(pros::E_CONTROLLER_DIGITAL_L1)) {
