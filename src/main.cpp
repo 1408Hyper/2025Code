@@ -1245,27 +1245,35 @@ namespace hyper {
 			const static uint8_t BOTTOM = 0;
 			const static uint8_t MID = 1;
 			const static uint8_t TOP = 2;
-		};
+		}; // struct MotorID
+		
 	private:
 		// Replaced individual motor groups with an array for indexed access
 		std::array<pros::MotorGroup, 3> mgs;
 
 		void handleTopGoal() {
-			
+			// reverse spin MID and normal spin BOT and reverse spin TOP
+			mgs[MotorID::TOP].move(-127);
+			mgs[MotorID::MID].move(-127);
+			mgs[MotorID::BOTTOM].move(127);
 		}
 
 		void handleMidGoal() {
-
+			// reverse spin MID normal spin BOT
+			mgs[MotorID::MID].move(-127);
+			mgs[MotorID::BOTTOM].move(127);
 		}
 
 		void handleBottomGoal() {
-			mgs[MotorID::BOTTOM].move(127);
-			mgs[MotorID::MID].move(127);
+			// reverse spin MID and BOT
+			mgs[MotorID::BOTTOM].move(-127);
+			mgs[MotorID::MID].move(-127);
 		}
 
 		void handleIntake() {
-			mgs[MotorID::BOTTOM].move(-127);
-			mgs[MotorID::MID].move(-127);
+			// normal spin MID and BOT
+			mgs[MotorID::BOTTOM].move(127);
+			mgs[MotorID::MID].move(127);
 		}
 
 		void handleStop() {

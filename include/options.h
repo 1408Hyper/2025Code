@@ -22,7 +22,7 @@
 
 // MOTORS: BOT, MID, TOP: 10, 17, 11
 
-// (Intake) R1: reverse spin BOT and MID
+// (Intake) R1: normal spin BOT and normal spin MID
 // (Bot Goal) R2: reverse spin MID and reverse spin BOT
 // (Mid Goal) L2: reverse spin MID and normal spin BOT
 // (Top Goal) L1: reverse spin MID and normal spin BOT and reverse spin TOP
