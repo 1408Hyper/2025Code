@@ -1139,7 +1139,7 @@ namespace hyper {
 		public:
 			/// @brief Sets the driver control mode
 			/// @param mode Mode to set the driver control to
-			void setDriveControlMode(DriveControlMode mode = DriveControlMode::ATAC {
+			void setDriveControlMode(DriveControlMode mode = DriveControlMode::ATAC) {
 				driveControlMode = mode;
 
 				switch (driveControlMode) {
@@ -1283,13 +1283,17 @@ namespace hyper {
 		}
 	protected:
 	public:
+		struct HolderPorts {
+			MGPorts bottom;
+			MGPorts mid;
+			MGPorts top;
+		};
+
 		/// @brief Args for holder object
 		/// @param abstractComponentArgs Args for AbstractComponent object
 		struct HolderArgs {
 			AbstractComponentArgs abstractComponentArgs;
-			MGPorts bottomPorts;
-			MGPorts midPorts;
-			MGPorts topPorts;
+			HolderPorts ports;
 		};
 
 		/// @brief Creates holder object
@@ -1298,9 +1302,9 @@ namespace hyper {
 			AbstractComponent(args.abstractComponentArgs),
 			// Initialize array elements with the provided port groups
 			mgs{
-				pros::MotorGroup(args.bottomPorts),
-				pros::MotorGroup(args.midPorts),
-				pros::MotorGroup(args.topPorts)
+				pros::MotorGroup(BOT_PORTS),
+				pros::MotorGroup(MID_PORTS),
+				pros::MotorGroup(TOP_PORTS)
 			} {};
 
 		void opControl() override {
@@ -1325,6 +1329,8 @@ namespace hyper {
 	public:
 		Drivetrain::DriveManager drive;
 
+		Holder holder;
+
 		Timer timer;
 		
 		// All components are stored in this vector
@@ -1334,6 +1340,7 @@ namespace hyper {
 		/// @param dvtPorts Ports for drivetrain
 		struct ComponentManagerUserArgs {
 			Drivetrain::DriveManager::DriveManagerUserArgs driveArgs;
+			Holder::HolderPorts holderPorts;
 		};
 
 		/// @brief Args for component manager object
@@ -1350,11 +1357,13 @@ namespace hyper {
 			AbstractComponent(args.aca),
 
 			drive({args.aca, args.user.driveArgs}),	
+			holder({args.aca, args.user.holderPorts}),
 			timer({args.aca}) {
 				// Add component pointers to vector
 				// MUST BE DONE AFTER INITIALISATION not BEFORE because of pointer issues
 				components = {
 					&drive,
+					&holder,
 					&timer
 				};
 			};
