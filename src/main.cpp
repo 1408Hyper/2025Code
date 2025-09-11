@@ -1139,7 +1139,7 @@ namespace hyper {
 		public:
 			/// @brief Sets the driver control mode
 			/// @param mode Mode to set the driver control to
-			void setDriveControlMode(DriveControlMode mode = DriveControlMode::ARCADE) {
+			void setDriveControlMode(DriveControlMode mode = DriveControlMode::ATAC {
 				driveControlMode = mode;
 
 				switch (driveControlMode) {
@@ -1271,7 +1271,7 @@ namespace hyper {
 		}
 
 		void handleIntake() {
-			// normal spin MID and BOT
+			// normal spin MID and BOT		
 			mgs[MotorID::BOTTOM].move(127);
 			mgs[MotorID::MID].move(127);
 		}
