@@ -1259,9 +1259,10 @@ namespace hyper {
 		}
 
 		void handleMidGoal() {
-			// reverse spin MID normal spin BOT
-			mgs[MotorID::MID].move(-127);
-			mgs[MotorID::BOTTOM].move(127);
+			// normal spin MID normal spin BOT and TOP
+			mgs[MotorID::MID].move(127);
+			mgs[MotorID::BOTTOM].move(-127);
+			mgs[MotorID::TOP].move(-127);
 		}
 
 		void handleBottomGoal() {
@@ -1271,8 +1272,13 @@ namespace hyper {
 		}
 
 		void handleIntake() {
-			// normal spin MID and BOT		
-			mgs[MotorID::BOTTOM].move(127);
+			// reverse spin MID and BOT		
+			mgs[MotorID::BOTTOM].move(-127);
+			mgs[MotorID::MID].move(-127);
+		}
+
+		void handleSingleMid() {
+			// JUST normal spin mid
 			mgs[MotorID::MID].move(127);
 		}
 
@@ -1316,6 +1322,8 @@ namespace hyper {
 				handleIntake();
 			} else if (master->get_digital(pros::E_CONTROLLER_DIGITAL_R2)) {
 				handleBottomGoal();
+			else if (master->get_digital(pros::E_CONTROLLER_DIGITAL_A)) {
+				handleSingleMid();
 			} else {
 				handleStop();
 			}
