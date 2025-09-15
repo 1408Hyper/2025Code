@@ -1322,7 +1322,7 @@ namespace hyper {
 				handleIntake();
 			} else if (master->get_digital(pros::E_CONTROLLER_DIGITAL_R2)) {
 				handleBottomGoal();
-			else if (master->get_digital(pros::E_CONTROLLER_DIGITAL_A)) {
+			} else if (master->get_digital(pros::E_CONTROLLER_DIGITAL_A)) {
 				handleSingleMid();
 			} else {
 				handleStop();
