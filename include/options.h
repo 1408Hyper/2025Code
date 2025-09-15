@@ -40,8 +40,8 @@
 #define DO_POST_AUTON true
 #define DO_OP_CONTROL true
 
-#define LEFT_DRIVE_PORTS {-18, -8, -21}
-#define RIGHT_DRIVE_PORTS {15, 14, 13}
+#define LEFT_DRIVE_PORTS {-15, -14, -13}
+#define RIGHT_DRIVE_PORTS {18, 8, 21}
 
 // Chassis class to use (default is initDefaultChassis)
 #define INIT_CHASSIS initDefaultChassis
