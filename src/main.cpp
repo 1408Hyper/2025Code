@@ -1258,7 +1258,7 @@ namespace hyper {
 		}
 	}; // class GPSDiagnostic
 
-	class Holder : public AbstractComponent {
+	class Disperser : public AbstractComponent {
 	public:
 		// Struct to index motorGroupArray
 		struct MotorID {
@@ -1309,22 +1309,22 @@ namespace hyper {
 		}
 	protected:
 	public:
-		struct HolderPorts {
+		struct DisperserPorts {
 			MGPorts bottom;
 			MGPorts mid;
 			MGPorts top;
 		};
 
-		/// @brief Args for holder object
+		/// @brief Args for disperser object
 		/// @param abstractComponentArgs Args for AbstractComponent object
-		struct HolderArgs {
+		struct DisperserArgs {
 			AbstractComponentArgs abstractComponentArgs;
-			HolderPorts ports;
+			DisperserPorts ports;
 		};
 
-		/// @brief Creates holder object
-		/// @param args Args for holder object (check args struct for more info)
-		Holder(HolderArgs args) : 
+		/// @brief Creates disperser object
+		/// @param args Args for disperser object (check args struct for more info)
+		Disperser(DisperserArgs args) : 
 			AbstractComponent(args.abstractComponentArgs),
 			// Initialize array elements with the provided port groups
 			mgs{
@@ -1348,7 +1348,7 @@ namespace hyper {
 				handleStop();
 			}
 		}
-	}; // class Holder
+	}; // class Disperser
 
 	class ForkMech : public AbstractMech {
 	private:
@@ -1382,7 +1382,7 @@ namespace hyper {
 	public:
 		Drivetrain::DriveManager drive;
 
-		Holder holder;
+		Disperser disp;
 
 		Timer timer;
 		
@@ -1391,9 +1391,10 @@ namespace hyper {
 
 		/// @brief Args for component manager object passed to the chassis, such as ports
 		/// @param dvtPorts Ports for drivetrain
+		/// @param dispPorts Ports for disperser
 		struct ComponentManagerUserArgs {
 			Drivetrain::DriveManager::DriveManagerUserArgs driveArgs;
-			Holder::HolderPorts holderPorts;
+			Disperser::DisperserPorts dispPorts;
 		};
 
 		/// @brief Args for component manager object
@@ -1410,13 +1411,13 @@ namespace hyper {
 			AbstractComponent(args.aca),
 
 			drive({args.aca, args.user.driveArgs}),	
-			holder({args.aca, args.user.holderPorts}),
+			disp({args.aca, args.user.dispPorts}),
 			timer({args.aca}) {
 				// Add component pointers to vector
 				// MUST BE DONE AFTER INITIALISATION not BEFORE because of pointer issues
 				components = {
 					&drive,
-					&holder,
+					&disp,
 					&timer
 				};
 			};
@@ -1596,7 +1597,7 @@ hyper::AbstractChassis* currentChassis;
 void initDefaultChassis() {
 	static hyper::Chassis defaultChassis({
 		{{{LEFT_DRIVE_PORTS, RIGHT_DRIVE_PORTS, IMU_PORT, LAT_ROT_DRIVE_PORT}}, // Drivetrain MGs and IMU ports
-		{{DISP_BOT_PORTS}, {DISP_MID_PORTS}, {DISP_TOP_PORTS}}} // holderPorts with empty bottom, mid, top ports
+		{{DISP_BOT_PORTS}, {DISP_MID_PORTS}, {DISP_TOP_PORTS}}} // Disperser ports with bottom, mid, top ports
 	});
 	
 	currentChassis = &defaultChassis;
