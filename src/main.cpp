@@ -152,6 +152,11 @@ namespace hyper {
 		return mean;
 	}
 
+
+
+
+
+
 	// Class declarations
 
 	/// @brief Abstract chassis class for if you want a custom chassis class
@@ -663,13 +668,31 @@ namespace hyper {
 				uint8_t tRotPort;
 			};
 
+			/// @brief Tare the motor groups
+			void tare() {
+				left.tare_position();
+				right.tare_position();
+			}
+
+			void calibrateAll(bool blocking = true) {
+				// Calibrate/tare IMU
+				imu.reset(blocking);
+				imu.tare();
+
+				// Reset encoders
+				tRot.reset();
+				lRot.reset();
+			}
+
 			/// @brief Constructor for DriveMGs object
 			/// @param leftPorts Ports for left motor group
 			/// @param rightPorts Ports for right motor group
 			DriveIO(DrivePorts drivePorts) : 
 				left(drivePorts.leftPorts), right(drivePorts.rightPorts),
 				imu(drivePorts.imuPort),
-				lRot(drivePorts.lRotPort), tRot(drivePorts.tRotPort) {};
+				lRot(drivePorts.lRotPort), tRot(drivePorts.tRotPort) {
+					calibrateAll();
+				};
 
 			/// @brief Set the voltage of the motor groups
 			/// @param leftVoltage Voltage to set the left motor group to
@@ -698,12 +721,6 @@ namespace hyper {
 			void move(int leftSpeed, int rightSpeed) {
 				left.move(leftSpeed);
 				right.move(rightSpeed);
-			}
-
-			/// @brief Tare the motor groups
-			void tare() {
-				left.tare_position();
-				right.tare_position();
 			}
 
 			/// @brief Get the average position of the motor groups (certain wires on our motor are broken so you MUST use this if you want a reliable position)
@@ -745,7 +762,7 @@ namespace hyper {
 				1.0, 0.0, 0.4, 3.0
 			};
 
-			static constexpr float inchesPerTick = 0.0002836;
+			static constexpr float inchesPerTick = 0.0001096386338;
 
 			struct DrivePIDArgs {
 				DriveIO* dio;
@@ -764,7 +781,10 @@ namespace hyper {
 				
 				dio->tare();
 
-				pos /= inchesPerTick;
+				//pos /= inchesPerTick;
+
+				// TEMP COMMENT OUT BEFORE FINISH
+				pos = 276170;
 
 				float error = pos;
 				float motorPos = 0;
@@ -780,7 +800,7 @@ namespace hyper {
 
 				while (true) {
 					// get avg error
-					motorPos = dio->lRot.get_position();
+					motorPos = -dio->lRot.get_position();
 					error = pos - motorPos;
 
 					integral += error;
@@ -797,10 +817,10 @@ namespace hyper {
 					out = std::clamp(out, -MotorBounds::MILLIVOLT_MAX, MotorBounds::MILLIVOLT_MAX);
 
 					out /= reductionFactor;
-					dio->voltage(out, out);
+					//dio->voltage(out, out);
 
 					if (std::fabs(error) <= kv.threshold) {
-						break;
+						//break;
 					}
 
 					pros::lcd::print(4, ("PIDMove Motor Pos: " + std::to_string(motorPos)).c_str());
@@ -808,8 +828,8 @@ namespace hyper {
 					pros::lcd::print(7, ("PIDMove Error: " + std::to_string(error)).c_str());
 
 					if (cycles >= maxCycles) {
-						pros::lcd::print(4, "PIDMove Time limit reached");
-						break;
+						//pros::lcd::print(4, "PIDMove Time limit reached");
+						//break;
 					}
 
 					pros::delay(delayMs);
@@ -1253,9 +1273,9 @@ namespace hyper {
 
 		void handleTopGoal() {
 			// reverse spin MID and normal spin BOT and reverse spin TOP
-			mgs[MotorID::TOP].move(-127);
-			mgs[MotorID::MID].move(-127);
-			mgs[MotorID::BOTTOM].move(127);
+			mgs[MotorID::TOP].move(127);
+			mgs[MotorID::MID].move(127);
+			mgs[MotorID::BOTTOM].move(-127);
 		}
 
 		void handleMidGoal() {
@@ -1273,13 +1293,13 @@ namespace hyper {
 
 		void handleIntake() {
 			// reverse spin MID and BOT		
-			mgs[MotorID::BOTTOM].move(-127);
-			mgs[MotorID::MID].move(-127);
+			mgs[MotorID::BOTTOM].move(90);
+			mgs[MotorID::MID].move(127);
 		}
 
 		void handleSingleMid() {
 			// JUST normal spin mid
-			mgs[MotorID::MID].move(127);
+			mgs[MotorID::MID].move(-127);
 		}
 
 		void handleStop() {
@@ -1429,8 +1449,8 @@ namespace hyper {
 			
 		}
 
-		void testFwd4Tiles() {
-
+		void testFwd2Tiles() {
+			cm->drive.pid.lateral(48);
 		}
 	protected:
 	public:
@@ -1447,9 +1467,9 @@ namespace hyper {
 
 		// TODO: Implement
 		void run() override {
-			defaultAuton();
+			//defaultAuton();
 			//testRight90();
-			//testFwd4Tiles();
+			testFwd2Tiles();
 		}
 	}; // class MatchAuton
 

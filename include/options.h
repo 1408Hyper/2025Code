@@ -14,7 +14,7 @@
 // IMU
 #define IMU_PORT 12
 // Rotary encoder
-#define ROT_DRIVE_PORT 2
+#define ROT_DRIVE_PORT 12
 // AI Vision
 #define AI_VISION_PORT 3
 // GPS Port
@@ -27,12 +27,12 @@
 // (Mid Goal) L2: reverse spin MID and normal spin BOT
 // (Top Goal) L1: reverse spin MID and normal spin BOT and reverse spin TOP
 
-#define BOT_PORTS {10}
+#define BOT_PORTS {9}
 #define MID_PORTS {17}
 #define TOP_PORTS {11}
 
 // Turn on/off auton and opcontrol
-#define DO_MATCH_AUTON false
+#define DO_MATCH_AUTON true
 #define DO_SKILLS_AUTON false
 
 // Turn on for skills prep/post auton/opcontrol functions to be run on components
