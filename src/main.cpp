@@ -152,11 +152,6 @@ namespace hyper {
 		return mean;
 	}
 
-
-
-
-
-
 	// Class declarations
 
 	/// @brief Abstract chassis class for if you want a custom chassis class
@@ -252,6 +247,7 @@ namespace hyper {
 		virtual ~AbstractComponent() = default;
 	}; // class ChassisComponent
 
+	/// @brief Abstract pneumatic mechanism class for custom mech classes
 	class AbstractMech : public AbstractComponent {
 	private:
 		bool engaged = false;
@@ -278,6 +274,11 @@ namespace hyper {
 		void actuate(bool value) {
 			piston.set_value(value);
 			engaged = value;
+		}
+
+		/// @brief Toggles the piston state
+		void toggle() {
+			actuate(!engaged);
 		}
 
 		/// @brief Gets the piston object
@@ -741,7 +742,6 @@ namespace hyper {
 		class DrivePID {
 		public:
 		private:
-
 			DriveIO* dio;
 
 			int delayMs = 20;
@@ -817,10 +817,10 @@ namespace hyper {
 					out = std::clamp(out, -MotorBounds::MILLIVOLT_MAX, MotorBounds::MILLIVOLT_MAX);
 
 					out /= reductionFactor;
-					//dio->voltage(out, out);
+					dio->voltage(out, out);
 
 					if (std::fabs(error) <= kv.threshold) {
-						//break;
+						break;
 					}
 
 					pros::lcd::print(4, ("PIDMove Motor Pos: " + std::to_string(motorPos)).c_str());
@@ -828,8 +828,8 @@ namespace hyper {
 					pros::lcd::print(7, ("PIDMove Error: " + std::to_string(error)).c_str());
 
 					if (cycles >= maxCycles) {
-						//pros::lcd::print(4, "PIDMove Time limit reached");
-						//break;
+						pros::lcd::print(4, "PIDMove Time limit reached");
+						break;
 					}
 
 					pros::delay(delayMs);
@@ -1328,9 +1328,9 @@ namespace hyper {
 			AbstractComponent(args.abstractComponentArgs),
 			// Initialize array elements with the provided port groups
 			mgs{
-				pros::MotorGroup(BOT_PORTS),
-				pros::MotorGroup(MID_PORTS),
-				pros::MotorGroup(TOP_PORTS)
+				pros::MotorGroup(args.ports.bottom),
+				pros::MotorGroup(args.ports.mid),
+				pros::MotorGroup(args.ports.top)
 			} {};
 
 		void opControl() override {
@@ -1349,6 +1349,31 @@ namespace hyper {
 			}
 		}
 	}; // class Holder
+
+	class ForkMech : public AbstractMech {
+	private:
+		BtnManager btnMgr;
+	protected:
+	public:
+		/// @brief Args for fork mechanism object
+		/// @param abstractComponentArgs Args for AbstractComponent object
+		struct ForkMechArgs {
+			AbstractMechArgs abstractMechArgs;
+			pros::controller_digital_e_t btn = pros::E_CONTROLLER_DIGITAL_X;
+		};
+
+		/// @brief Creates fork mechanism object
+		/// @param args Args for fork mechanism object (check args struct for more info)
+		ForkMech(ForkMechArgs args) : 
+			AbstractMech(args.abstractMechArgs),
+			btnMgr({{args.abstractMechArgs.abstractComponentArgs}, 
+				{args.btn, {std::bind(&ForkMech::toggle, this)}, {}, {}}
+			}) {};
+
+		void opControl() override {
+			btnMgr.opControl();
+		}
+	}; // class ForkMech
 
 	/// @brief Class which manages all components
 	class ComponentManager : public AbstractComponent {
@@ -1570,7 +1595,8 @@ hyper::AbstractChassis* currentChassis;
 
 void initDefaultChassis() {
 	static hyper::Chassis defaultChassis({
-		{{{LEFT_DRIVE_PORTS, RIGHT_DRIVE_PORTS, IMU_PORT, ROT_DRIVE_PORT}}} // Drivetrain MGs and IMU ports
+		{{{LEFT_DRIVE_PORTS, RIGHT_DRIVE_PORTS, IMU_PORT, LAT_ROT_DRIVE_PORT}}, // Drivetrain MGs and IMU ports
+		{{DISP_BOT_PORTS}, {DISP_MID_PORTS}, {DISP_TOP_PORTS}}} // holderPorts with empty bottom, mid, top ports
 	});
 	
 	currentChassis = &defaultChassis;

@@ -8,28 +8,31 @@
 // Main opcontrol function to use
 #define CURRENT_OPCONTROL mainControl
 
-//Sensor ports 
+// Analog ports
 
-// Ports for telemetry
+#define FORK_MECH_PORT 'A'
+
+// Telemetry ports
+
 // IMU
 #define IMU_PORT 12
-// Rotary encoder
-#define ROT_DRIVE_PORT 12
+// Rotary encoder (Lateral)
+#define LAT_ROT_DRIVE_PORT 12
 // AI Vision
 #define AI_VISION_PORT 3
 // GPS Port
 #define GPS_PORT 4
 
-// MOTORS: BOT, MID, TOP: 10, 17, 11
+// Primary Disperser MGs
 
 // (Intake) R1: normal spin BOT and normal spin MID
 // (Bot Goal) R2: reverse spin MID and reverse spin BOT
 // (Mid Goal) L2: reverse spin MID and normal spin BOT
 // (Top Goal) L1: reverse spin MID and normal spin BOT and reverse spin TOP
 
-#define BOT_PORTS {9}
-#define MID_PORTS {17}
-#define TOP_PORTS {11}
+#define DISP_BOT_PORTS {9}
+#define DISP_MID_PORTS {17}
+#define DISP_TOP_PORTS {11}
 
 // Turn on/off auton and opcontrol
 #define DO_MATCH_AUTON true
@@ -39,6 +42,8 @@
 #define DO_SKILLS_PREP true
 #define DO_POST_AUTON true
 #define DO_OP_CONTROL true
+
+// Drivetrain Ports
 
 #define LEFT_DRIVE_PORTS {-15, -14, -13}
 #define RIGHT_DRIVE_PORTS {18, 8, 21}
