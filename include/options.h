@@ -15,7 +15,7 @@
 // Telemetry ports
 
 // IMU
-#define IMU_PORT 12
+#define IMU_PORT 16
 // Rotary encoder (Lateral)
 #define LAT_ROT_DRIVE_PORT 12
 // AI Vision
@@ -46,7 +46,7 @@
 // Drivetrain Ports
 
 #define LEFT_DRIVE_PORTS {-15, -14, -13}
-#define RIGHT_DRIVE_PORTS {18, 8, 21}
+#define RIGHT_DRIVE_PORTS {20, 8, 21}
 
 // Chassis class to use (default is initDefaultChassis)
 #define INIT_CHASSIS initDefaultChassis

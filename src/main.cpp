@@ -763,6 +763,7 @@ namespace hyper {
 			};
 
 			static constexpr float inchesPerTick = 0.0001096386338;
+			static constexpr float multiplierITP = 9120.872500328438;
 
 			struct DrivePIDArgs {
 				DriveIO* dio;
@@ -781,7 +782,7 @@ namespace hyper {
 				
 				dio->tare();
 
-				//pos /= inchesPerTick;
+				//pos *= multiplierITP;
 
 				// TEMP COMMENT OUT BEFORE FINISH
 				pos = 276170;
