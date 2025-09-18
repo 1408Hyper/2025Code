@@ -755,15 +755,18 @@ namespace hyper {
 			};
 			
 			static inline const KValues kTurn = {
-				1.0, 0.0, 0.0, 1.0
+				0.3, 0.0, 0.7, 1.0
 			};
 
 			static inline const KValues kMove = {
 				1.0, 0.0, 0.4, 3.0
 			};
 
-			static constexpr float inchesPerTick = 0.0001096386338;
-			static constexpr float multiplierITP = 9120.872500328438;
+			struct InchesPerTick {
+				static constexpr float L_ROT_DIV_THEORETICAL = 0.0001096386338;
+				static constexpr float L_ROT_MUL_THEORETICAL = 9120.872500328438;
+				static constexpr float L_ROT_MUL_PRACTICAL = 5753.54167;
+			};
 
 			struct DrivePIDArgs {
 				DriveIO* dio;
@@ -782,7 +785,7 @@ namespace hyper {
 				
 				dio->tare();
 
-				//pos *= multiplierITP;
+				//pos *= InchesPerTick::L_ROT_MUL_PRACTICAL;
 
 				// TEMP COMMENT OUT BEFORE FINISH
 				pos = 276170;
@@ -796,6 +799,10 @@ namespace hyper {
 
 				float maxCycles = timeLimit / delayMs;
 				float cycles = 0;
+
+				bool lastOutPositive = pos > 0;
+				bool curOutPositive = pos > 0;
+				int outCycles = 0;
 
 				// with moving you just wanna move both MGsat the same speed
 
@@ -819,6 +826,16 @@ namespace hyper {
 
 					out /= reductionFactor;
 					dio->voltage(out, out);
+
+					curOutPositive = out > 0;
+					if (lastOutPositive != curOutPositive) {
+						outCycles++;
+					}
+					
+					if (outCycles > 3) {
+						pros::lcd::print(4, "PIDMove Out oscillating STOP");
+						break;
+					}
 
 					if (std::fabs(error) <= kv.threshold) {
 						break;
