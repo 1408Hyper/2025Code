@@ -1276,6 +1276,60 @@ namespace hyper {
 		}
 	}; // class GPSDiagnostic
 
+	/// @brief Screens and reports state of game elements being held by robot
+	class DynamicScreen : public AbstractComponent {
+	private:
+	protected:
+	public:
+		enum class State {
+			DETECTED,
+			UNDETECTED
+		};
+	private:
+		State state = State::UNDETECTED;
+
+		pros::Optical sensor;
+	public:
+		int proximityThreshold = 45; // Occlusion threshold
+
+		struct SensorPorts {
+			DigiPort optical;	
+		};
+
+		/// @brief Args for dynamic screen object
+		/// @param abstractComponentArgs Args for AbstractComponent object
+		struct DynamicScreenArgs {
+			AbstractComponentArgs abstractComponentArgs;
+			SensorPorts sensorPorts;
+		};
+
+		/// @brief Creates dynamic screen object
+		/// @param args Args for dynamic screen object (check args struct for more info)
+		DynamicScreen(DynamicScreenArgs args) : 
+			AbstractComponent(args.abstractComponentArgs),
+			sensor(args.sensorPorts.optical) {};
+
+		void opControl() {
+			// Detect for game element using proximity
+			// TODO: Implement multi-colour sorting
+
+			if (sensor.get_proximity() >= proximityThreshold) {
+				state = State::DETECTED;
+			} else {
+				state = State::UNDETECTED;
+			}
+
+			pros::lcd::print(2, ("Proximity: " + std::to_string(sensor.get_proximity())).c_str());
+		}
+
+		/// @brief Retrieve state of game elements
+		/// @return State of game elements
+		State getState() {
+			return state;
+		}
+
+	}; // class DynamicScreen
+
 	class Disperser : public AbstractComponent {
 	public:
 		// Struct to index motorGroupArray
@@ -1284,16 +1338,73 @@ namespace hyper {
 			const static uint8_t MID = 1;
 			const static uint8_t TOP = 2;
 		}; // struct MotorID
-		
+
+		DynamicScreen* dynamicScreen;
+
+		int delayCycles = 20;
+
+		int currentCycles = 0;
 	private:
 		// Replaced individual motor groups with an array for indexed access
 		std::array<pros::MotorGroup, 3> mgs;
 
+		/*void handleTopDetected() {
+			// if rejecting, stop mid and bot
+			mgs[MotorID::MID].move(0);
+			mgs[MotorID::BOTTOM].move(0);
+		}
+
+		void handleTopUndetected() {
+			// if not rejecting, spin mid and bot
+			mgs[MotorID::MID].move(127);
+			mgs[MotorID::BOTTOM].move(-127);
+		}*/
+
+		void handleTopDetected() {
+			if (currentCycles <= delayCycles) {
+				currentCycles++;
+			}
+		}
+
+		void handleTopUndetected() {
+			currentCycles = 0;
+		}
+
+		void handleTopLower() {
+			if (currentCycles <= delayCycles) {
+				// if not rejecting, spin mid and bot
+				mgs[MotorID::MID].move(127);
+				mgs[MotorID::BOTTOM].move(-127);
+			} else {
+				// if rejecting, stop mid and bot
+				mgs[MotorID::MID].move(0);
+				mgs[MotorID::BOTTOM].move(0);
+			}
+		}
+
+		void handleDynamicScreen() {
+			DynamicScreen::State state = dynamicScreen->getState();
+
+			switch (state) {
+				case DynamicScreen::State::DETECTED:
+					handleTopDetected();
+					break;
+				case DynamicScreen::State::UNDETECTED:
+					handleTopUndetected();
+					break;
+				default:
+					handleTopUndetected();
+					break;
+			}
+
+			handleTopLower();
+		}
+
 		void handleTopGoal() {
 			// reverse spin MID and normal spin BOT and reverse spin TOP
 			mgs[MotorID::TOP].move(127);
-			mgs[MotorID::MID].move(127);
-			mgs[MotorID::BOTTOM].move(-127);
+
+			handleDynamicScreen();
 		}
 
 		void handleMidGoal() {
@@ -1338,6 +1449,7 @@ namespace hyper {
 		struct DisperserArgs {
 			AbstractComponentArgs abstractComponentArgs;
 			DisperserPorts ports;
+			DynamicScreen* dynamicScreen;
 		};
 
 		/// @brief Creates disperser object
@@ -1349,7 +1461,8 @@ namespace hyper {
 				pros::MotorGroup(args.ports.bottom),
 				pros::MotorGroup(args.ports.mid),
 				pros::MotorGroup(args.ports.top)
-			} {};
+			},
+			dynamicScreen(args.dynamicScreen) {};
 
 		void opControl() override {
 			if (master->get_digital(pros::E_CONTROLLER_DIGITAL_L1)) {
@@ -1400,6 +1513,8 @@ namespace hyper {
 	public:
 		Drivetrain::DriveManager drive;
 
+		DynamicScreen screen;
+
 		Disperser disp;
 
 		Timer timer;
@@ -1413,6 +1528,7 @@ namespace hyper {
 		struct ComponentManagerUserArgs {
 			Drivetrain::DriveManager::DriveManagerUserArgs driveArgs;
 			Disperser::DisperserPorts dispPorts;
+			DynamicScreen::SensorPorts screenPorts;
 		};
 
 		/// @brief Args for component manager object
@@ -1429,14 +1545,16 @@ namespace hyper {
 			AbstractComponent(args.aca),
 
 			drive({args.aca, args.user.driveArgs}),	
-			disp({args.aca, args.user.dispPorts}),
+			screen({args.aca, args.user.screenPorts}),
+			disp({args.aca, args.user.dispPorts, &screen}),
 			timer({args.aca}) {
 				// Add component pointers to vector
 				// MUST BE DONE AFTER INITIALISATION not BEFORE because of pointer issues
 				components = {
 					&drive,
 					&disp,
-					&timer
+					&timer,
+					&screen
 				};
 			};
 
@@ -1511,9 +1629,9 @@ namespace hyper {
 
 		// TODO: Implement
 		void run() override {
-			//defaultAuton();
+			defaultAuton();
 			//testRight90();
-			testFwd2Tiles();
+			//testFwd2Tiles();
 		}
 	}; // class MatchAuton
 
@@ -1614,8 +1732,17 @@ hyper::AbstractChassis* currentChassis;
 
 void initDefaultChassis() {
 	static hyper::Chassis defaultChassis({
-		{{{LEFT_DRIVE_PORTS, RIGHT_DRIVE_PORTS, IMU_PORT, LAT_ROT_DRIVE_PORT}}, // Drivetrain MGs and IMU ports
-		{{DISP_BOT_PORTS}, {DISP_MID_PORTS}, {DISP_TOP_PORTS}}} // Disperser ports with bottom, mid, top ports
+		{
+			// ComponentManagerUserArgs
+			{
+				// Drivetrain args
+				{{LEFT_DRIVE_PORTS, RIGHT_DRIVE_PORTS, IMU_PORT, LAT_ROT_DRIVE_PORT}},
+				// Disperser ports
+				{DISP_BOT_PORTS, DISP_MID_PORTS, DISP_TOP_PORTS},
+				// Dynamic screen ports
+				{SCREEN_TOP_PORT}
+			}
+		}
 	});
 	
 	currentChassis = &defaultChassis;

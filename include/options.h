@@ -23,6 +23,9 @@
 // GPS Port
 #define GPS_PORT 4
 
+// Optical Sensors for Dynamic Screen
+#define SCREEN_TOP_PORT 7
+
 // Primary Disperser MGs
 
 // (Intake) R1: normal spin BOT and normal spin MID
@@ -30,12 +33,12 @@
 // (Mid Goal) L2: reverse spin MID and normal spin BOT
 // (Top Goal) L1: reverse spin MID and normal spin BOT and reverse spin TOP
 
-#define DISP_BOT_PORTS {9}
+#define DISP_BOT_PORTS {11}
 #define DISP_MID_PORTS {17}
-#define DISP_TOP_PORTS {11}
+#define DISP_TOP_PORTS {9}
 
 // Turn on/off auton and opcontrol
-#define DO_MATCH_AUTON true
+#define DO_MATCH_AUTON false
 #define DO_SKILLS_AUTON false
 
 // Turn on for skills prep/post auton/opcontrol functions to be run on components
