@@ -738,7 +738,7 @@ namespace hyper {
 			}
 		};
 
-		/// @brief Class to control autonomous PID routines for driving
+		/// @brief Class to control autonomous routines for driving
 		class DrivePID {
 		public:
 		private:
@@ -785,10 +785,7 @@ namespace hyper {
 				
 				dio->tare();
 
-				//pos *= InchesPerTick::L_ROT_MUL_PRACTICAL;
-
-				// TEMP COMMENT OUT BEFORE FINISH
-				pos = 276170;
+				pos *= InchesPerTick::L_ROT_MUL_PRACTICAL;
 
 				float error = pos;
 				float motorPos = 0;
@@ -1370,11 +1367,15 @@ namespace hyper {
 			currentCycles = 0;
 		}
 
+		void handleTLFallback() {
+			mgs[MotorID::MID].move(127);
+			mgs[MotorID::BOTTOM].move(-127);
+		}
+
 		void handleTopLower() {
 			if (currentCycles <= delayCycles) {
 				// if not rejecting, spin mid and bot
-				mgs[MotorID::MID].move(127);
-				mgs[MotorID::BOTTOM].move(-127);
+				handleTLFallback();
 			} else {
 				// if rejecting, stop mid and bot
 				mgs[MotorID::MID].move(0);
@@ -1397,14 +1398,17 @@ namespace hyper {
 					break;
 			}
 
-			handleTopLower();
+			// DEBUG: print current cycles
+			pros::lcd::print(4, ("Current Cycles: " + std::to_string(currentCycles)).c_str());
 		}
 
 		void handleTopGoal() {
 			// reverse spin MID and normal spin BOT and reverse spin TOP
 			mgs[MotorID::TOP].move(127);
 
-			handleDynamicScreen();
+			//handleTopLower();
+
+			handleTLFallback();
 		}
 
 		void handleMidGoal() {
@@ -1465,6 +1469,8 @@ namespace hyper {
 			dynamicScreen(args.dynamicScreen) {};
 
 		void opControl() override {
+			handleDynamicScreen();
+
 			if (master->get_digital(pros::E_CONTROLLER_DIGITAL_L1)) {
 				handleTopGoal();
 			} else if (master->get_digital(pros::E_CONTROLLER_DIGITAL_L2)) {
