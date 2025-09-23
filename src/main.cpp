@@ -1338,7 +1338,9 @@ namespace hyper {
 
 		DynamicScreen* dynamicScreen;
 
+		// How many cycles to DELAY, how many cycles to STOP.
 		int delayCycles = 10;
+		int resetCycles = 200;
 
 		int currentCycles = 0;
 	private:
@@ -1358,12 +1360,7 @@ namespace hyper {
 		}*/
 
 		void handleTopDetected() {
-			if (currentCycles <= delayCycles) {
-				currentCycles++;
-				
-				// DEBUG: Say that in this func
-				pros::lcd::print(3, "IN HTD");
-			}
+			currentCycles++;
 		}
 
 		void handleTopUndetected() {
@@ -1376,6 +1373,10 @@ namespace hyper {
 		}
 
 		void handleTopLower() {
+			if (currentCycles >= resetCycles) {
+				currentCycles = 0;
+			}
+
 			if (currentCycles <= delayCycles) {
 				// if not rejecting, spin mid and bot
 				handleTLFallback();
