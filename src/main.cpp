@@ -1343,7 +1343,7 @@ namespace hyper {
 		int resetCycles = 200;
 
 		int currentCycles = 0;
-	private:
+
 		// Replaced individual motor groups with an array for indexed access
 		std::array<pros::MotorGroup, 3> mgs;
 
@@ -1444,6 +1444,7 @@ namespace hyper {
 				mg.move(0);
 			}
 		}
+	private:
 	protected:
 	public:
 		struct DisperserPorts {
@@ -1509,7 +1510,9 @@ namespace hyper {
 			AbstractMech(args.abstractMechArgs),
 			btnMgr({{args.abstractMechArgs.abstractComponentArgs}, 
 				{args.btn, {std::bind(&ForkMech::toggle, this)}, {}, {}}
-			}) {};
+			}) {
+				actuate(true);
+			};
 
 		void opControl() override {
 			btnMgr.opControl();
@@ -1619,7 +1622,12 @@ namespace hyper {
 	class MatchAuton : public AbstractAuton {
 	private:
 		void defaultAuton() {
+			cm->fork.actuate(false);
 
+			cm->drive.pid.lateral(40);
+			cm->disp.handleMidGoal();
+
+			pros::delay(10000);	
 		}
 
 		void testRight90() {
@@ -1653,7 +1661,12 @@ namespace hyper {
 	class SkillsAuton : public AbstractAuton {
 	private:
 		void sector1() {
-			cm->drive.pid.lateral(48);
+			cm->fork.actuate(false);
+
+			cm->drive.pid.lateral(40);
+			cm->disp.handleMidGoal();
+
+			pros::delay(10000);	
 		}
 		
 		void sector2() {
