@@ -1338,7 +1338,7 @@ namespace hyper {
 
 		DynamicScreen* dynamicScreen;
 
-		int delayCycles = 20;
+		int delayCycles = 10;
 
 		int currentCycles = 0;
 	private:
@@ -1360,6 +1360,9 @@ namespace hyper {
 		void handleTopDetected() {
 			if (currentCycles <= delayCycles) {
 				currentCycles++;
+				
+				// DEBUG: Say that in this func
+				pros::lcd::print(3, "IN HTD");
 			}
 		}
 
@@ -1406,9 +1409,9 @@ namespace hyper {
 			// reverse spin MID and normal spin BOT and reverse spin TOP
 			mgs[MotorID::TOP].move(127);
 
-			//handleTopLower();
+			handleTopLower();
 
-			handleTLFallback();
+			//handleTLFallback();
 		}
 
 		void handleMidGoal() {
@@ -1496,7 +1499,7 @@ namespace hyper {
 		/// @param abstractComponentArgs Args for AbstractComponent object
 		struct ForkMechArgs {
 			AbstractMechArgs abstractMechArgs;
-			pros::controller_digital_e_t btn = pros::E_CONTROLLER_DIGITAL_X;
+			pros::controller_digital_e_t btn = pros::E_CONTROLLER_DIGITAL_LEFT;
 		};
 
 		/// @brief Creates fork mechanism object
@@ -1751,7 +1754,8 @@ void initDefaultChassis() {
 				// Disperser ports
 				{DISP_BOT_PORTS, DISP_MID_PORTS, DISP_TOP_PORTS},
 				// Dynamic screen ports
-				{SCREEN_TOP_PORT}
+				{SCREEN_TOP_PORT},
+				{FORK_MECH_PORT}
 			}
 		}
 	});

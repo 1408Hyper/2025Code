@@ -24,7 +24,7 @@
 #define GPS_PORT 4
 
 // Optical Sensors for Dynamic Screen
-#define SCREEN_TOP_PORT 7
+#define SCREEN_TOP_PORT 6
 
 // Primary Disperser MGs
 
