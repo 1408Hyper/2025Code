@@ -10,7 +10,7 @@
 
 // Analog ports
 
-#define FORK_MECH_PORT 'A'
+#define FORK_MECH_PORT 'H'
 
 // Telemetry ports
 

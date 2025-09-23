@@ -1523,6 +1523,8 @@ namespace hyper {
 
 		Disperser disp;
 
+		ForkMech fork;
+
 		Timer timer;
 		
 		// All components are stored in this vector
@@ -1535,6 +1537,7 @@ namespace hyper {
 			Drivetrain::DriveManager::DriveManagerUserArgs driveArgs;
 			Disperser::DisperserPorts dispPorts;
 			DynamicScreen::SensorPorts screenPorts;
+			AnalogPort forkPort;
 		};
 
 		/// @brief Args for component manager object
@@ -1553,6 +1556,7 @@ namespace hyper {
 			drive({args.aca, args.user.driveArgs}),	
 			screen({args.aca, args.user.screenPorts}),
 			disp({args.aca, args.user.dispPorts, &screen}),
+			fork({{{args.aca, args.user.forkPort}}}),
 			timer({args.aca}) {
 				// Add component pointers to vector
 				// MUST BE DONE AFTER INITIALISATION not BEFORE because of pointer issues
@@ -1560,6 +1564,7 @@ namespace hyper {
 					&drive,
 					&disp,
 					&timer,
+					&fork,
 					&screen
 				};
 			};
