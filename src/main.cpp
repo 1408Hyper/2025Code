@@ -675,14 +675,18 @@ namespace hyper {
 				right.tare_position();
 			}
 
+			void resetEncoders() {
+				// Reset encoders
+				tRot.reset();
+				lRot.reset();
+			}
+
 			void calibrateAll(bool blocking = true) {
 				// Calibrate/tare IMU
 				imu.reset(blocking);
 				imu.tare();
 
-				// Reset encoders
-				tRot.reset();
-				lRot.reset();
+				resetEncoders();
 			}
 
 			/// @brief Constructor for DriveMGs object
@@ -784,6 +788,8 @@ namespace hyper {
 				if (pos <= 0.01) { return; }
 				
 				dio->tare();
+
+				dio->resetEncoders();
 
 				pos *= InchesPerTick::L_ROT_MUL_PRACTICAL;
 
@@ -1625,19 +1631,21 @@ namespace hyper {
 			cm->fork.actuate(false);
 			cm->disp.handleIntake();
 
-			cm->drive.pid.lateral(15, 2);
+			cm->drive.pid.lateral(20, 3);
 
 			pros::delay(1000);
 			
-			cm->drive.pid.turn(70);
+			cm->drive.pid.turn(90);
 			pros::lcd::print(0, "Stopping");
 			cm->disp.handleStop();
 			cm->fork.actuate(true);
+
 			pros::delay(1000);
 			pros::lcd::print(0, "TLAT Start");
-			cm->drive.pid.lateral(27, 5);
+			cm->drive.pid.lateral(18, 4);
 			pros::lcd::print(0, "TLAT End");
 			pros::delay(1000);
+			
 			cm->disp.handleMidGoal();
 			pros::delay(5000);
 		}
