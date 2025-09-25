@@ -1424,14 +1424,14 @@ namespace hyper {
 
 		void handleBottomGoal() {
 			// reverse spin MID and BOT
-			mgs[MotorID::BOTTOM].move(-127);
-			mgs[MotorID::MID].move(-127);
+			mgs[MotorID::BOTTOM].move(127);
+			mgs[MotorID::MID].move(127);
 		}
 
 		void handleIntake() {
 			// reverse spin MID and BOT		
-			mgs[MotorID::BOTTOM].move(90);
-			mgs[MotorID::MID].move(127);
+			mgs[MotorID::BOTTOM].move(-127);
+			mgs[MotorID::MID].move(-127);
 		}
 
 		void handleSingleMid() {
@@ -1480,9 +1480,9 @@ namespace hyper {
 				handleTopGoal();
 			} else if (master->get_digital(pros::E_CONTROLLER_DIGITAL_L2)) {
 				handleMidGoal();
-			} else if (master->get_digital(pros::E_CONTROLLER_DIGITAL_R1)) {
-				handleIntake();
 			} else if (master->get_digital(pros::E_CONTROLLER_DIGITAL_R2)) {
+				handleIntake();
+			} else if (master->get_digital(pros::E_CONTROLLER_DIGITAL_R1)) {
 				handleBottomGoal();
 			} else if (master->get_digital(pros::E_CONTROLLER_DIGITAL_A)) {
 				handleSingleMid();
@@ -1623,15 +1623,33 @@ namespace hyper {
 	private:
 		void defaultAuton() {
 			cm->fork.actuate(false);
+			cm->disp.handleIntake();
 
-			cm->drive.pid.lateral(40);
+			cm->drive.pid.lateral(15, 2);
+
+			pros::delay(1000);
+			
+			cm->drive.pid.turn(70);
+			pros::lcd::print(0, "Stopping");
+			cm->disp.handleStop();
+			cm->fork.actuate(true);
+			pros::delay(1000);
+			pros::lcd::print(0, "TLAT Start");
+			cm->drive.pid.lateral(27, 5);
+			pros::lcd::print(0, "TLAT End");
+			pros::delay(1000);
 			cm->disp.handleMidGoal();
-
-			pros::delay(10000);	
+			pros::delay(5000);
 		}
 
 		void testRight90() {
 			
+		}
+
+		void testTinyLat() {
+			pros::delay(1000);
+			cm->drive.pid.lateral(10, 4);
+			pros::delay(10000);
 		}
 
 		void testFwd2Tiles() {
@@ -1650,11 +1668,11 @@ namespace hyper {
 		MatchAuton(MatchAutonArgs args) : 
 			AbstractAuton(args.autonArgs) {};
 
-		// TODO: Implement
 		void run() override {
 			defaultAuton();
 			//testRight90();
 			//testFwd2Tiles();
+			//testTinyLat();
 		}
 	}; // class MatchAuton
 
