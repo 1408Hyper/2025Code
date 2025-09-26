@@ -865,7 +865,9 @@ namespace hyper {
 			/// @param reductionFactor Factor to reduce the output by (higher value means lower speed)
 			/// @param timeLimit Time limit for the turn in milliseconds
 			void turn(double angle, float reductionFactor = 2, float timeLimit = 5000, const KValues& kv = DrivePID::kTurn) {
-				if (angle <= 0.01) { return; }
+				float absAngle = std::fabs(angle);
+
+				if (absAngle <= 0.01) { return; }
 
 				dio->imu.tare();
 				angle = naiveNormaliseAngle(angle);
@@ -887,7 +889,7 @@ namespace hyper {
 				float maxCycles = timeLimit / delayMs;
 				float cycles = 0;
 
-				if (std::fabs(angle) >= 180) {
+				if (std::fabs(absAngle) >= 180) {
 					turn180 = true;
 				}
 
@@ -1627,7 +1629,7 @@ namespace hyper {
 
 	class MatchAuton : public AbstractAuton {
 	private:
-		void defaultAuton() {
+		void defaultLeft() {
 			cm->fork.actuate(false);
 			cm->disp.handleIntake();
 
@@ -1647,6 +1649,36 @@ namespace hyper {
 			pros::delay(1000);
 			
 			cm->disp.handleMidGoal();
+			pros::delay(5000);
+		}
+
+		void defaultRight() {
+			// Mirror of defaultLeft: invert turn angles and use bottom goal instead of mid goal
+			cm->fork.actuate(false);
+			cm->disp.handleIntake();
+
+			cm->drive.pid.lateral(20, 4);
+
+			pros::delay(1000);
+
+			//cm->drive.pid.lateral(-2, 4, 1000); // small back up to align with goal
+
+			pros::delay(500);
+
+			cm->drive.pid.turn(-70, 2, 2500); // inverted angle
+
+			pros::lcd::print(0, "Stopping");
+			cm->disp.handleStop();
+
+			// was told not to deploy - just dont? alr ig :)))
+			//cm->fork.actuate(true);
+
+			pros::delay(250);
+			pros::lcd::print(0, "TLAT Start");
+			cm->drive.pid.lateral(14, 4, 3000);
+			pros::lcd::print(0, "TLAT End");
+
+			cm->disp.handleBottomGoal(); // bottom goal instead of mid goal
 			pros::delay(5000);
 		}
 
@@ -1677,7 +1709,9 @@ namespace hyper {
 			AbstractAuton(args.autonArgs) {};
 
 		void run() override {
-			defaultAuton();
+			//defaultLeft();
+			defaultRight();
+
 			//testRight90();
 			//testFwd2Tiles();
 			//testTinyLat();
