@@ -1633,20 +1633,20 @@ namespace hyper {
 			cm->fork.actuate(false);
 			cm->disp.handleIntake();
 
-			cm->drive.pid.lateral(20, 3);
+			cm->drive.pid.lateral(17.5, 3);
 
 			pros::delay(1000);
 			
-			cm->drive.pid.turn(90);
+			cm->drive.pid.turn(70, 2, 2500);
 			pros::lcd::print(0, "Stopping");
 			cm->disp.handleStop();
 			cm->fork.actuate(true);
 
-			pros::delay(1000);
+			pros::delay(250);
 			pros::lcd::print(0, "TLAT Start");
-			cm->drive.pid.lateral(18, 4);
+			cm->drive.pid.lateral(15, 4, 2500);
 			pros::lcd::print(0, "TLAT End");
-			pros::delay(1000);
+			pros::delay(250);
 			
 			cm->disp.handleMidGoal();
 			pros::delay(5000);
@@ -1709,8 +1709,8 @@ namespace hyper {
 			AbstractAuton(args.autonArgs) {};
 
 		void run() override {
-			//defaultLeft();
-			defaultRight();
+			defaultLeft();
+			//defaultRight();
 
 			//testRight90();
 			//testFwd2Tiles();
