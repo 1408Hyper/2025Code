@@ -1711,8 +1711,8 @@ namespace hyper {
 			AbstractAuton(args.autonArgs) {};
 
 		void run() override {
-			//defaultLeft();
-			defaultRight();
+			defaultLeft();
+			//defaultRight();
 
 			//testRight90();
 			//testFwd2Tiles();
