@@ -1518,9 +1518,7 @@ namespace hyper {
 			AbstractMech(args.abstractMechArgs),
 			btnMgr({{args.abstractMechArgs.abstractComponentArgs}, 
 				{args.btn, {std::bind(&ForkMech::toggle, this)}, {}, {}}
-			}) {
-				actuate(true);
-			};
+			}) {};
 
 		void opControl() override {
 			btnMgr.opControl();
@@ -1640,7 +1638,7 @@ namespace hyper {
 			cm->drive.pid.turn(70, 2, 2500);
 			pros::lcd::print(0, "Stopping");
 			cm->disp.handleStop();
-			cm->fork.actuate(true);
+			//cm->fork.actuate(true);
 
 			pros::delay(250);
 			pros::lcd::print(0, "TLAT Start");
@@ -1695,6 +1693,10 @@ namespace hyper {
 		void testFwd2Tiles() {
 			cm->drive.pid.lateral(48);
 		}
+
+		void testMechs() {
+			cm->fork.actuate(false);
+		}
 	protected:
 	public:
 		/// @brief Args for match auton object
@@ -1709,12 +1711,13 @@ namespace hyper {
 			AbstractAuton(args.autonArgs) {};
 
 		void run() override {
-			defaultLeft();
-			//defaultRight();
+			//defaultLeft();
+			defaultRight();
 
 			//testRight90();
 			//testFwd2Tiles();
 			//testTinyLat();
+			//testMechs();
 		}
 	}; // class MatchAuton
 
