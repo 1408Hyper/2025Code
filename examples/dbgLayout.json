@@ -4,6 +4,10 @@
             {
                 "type" : "dvt:lateral",
                 "dist" : 150
+            },
+            {
+                "type" : "dvt:turn",
+                "angle" : -90
             }
         ]
     }

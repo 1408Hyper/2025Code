@@ -247,6 +247,7 @@ namespace hyper {
 		virtual ~AbstractComponent() = default;
 	}; // class ChassisComponent
 
+	/// @brief Abstract pneumatic mechanism class for custom mech classes
 	class AbstractMech : public AbstractComponent {
 	private:
 		bool engaged = false;
@@ -273,6 +274,11 @@ namespace hyper {
 		void actuate(bool value) {
 			piston.set_value(value);
 			engaged = value;
+		}
+
+		/// @brief Toggles the piston state
+		void toggle() {
+			actuate(!engaged);
 		}
 
 		/// @brief Gets the piston object
@@ -663,13 +669,35 @@ namespace hyper {
 				uint8_t tRotPort;
 			};
 
+			/// @brief Tare the motor groups
+			void tare() {
+				left.tare_position();
+				right.tare_position();
+			}
+
+			void resetEncoders() {
+				// Reset encoders
+				tRot.reset();
+				lRot.reset();
+			}
+
+			void calibrateAll(bool blocking = true) {
+				// Calibrate/tare IMU
+				imu.reset(blocking);
+				imu.tare();
+
+				resetEncoders();
+			}
+
 			/// @brief Constructor for DriveMGs object
 			/// @param leftPorts Ports for left motor group
 			/// @param rightPorts Ports for right motor group
 			DriveIO(DrivePorts drivePorts) : 
 				left(drivePorts.leftPorts), right(drivePorts.rightPorts),
 				imu(drivePorts.imuPort),
-				lRot(drivePorts.lRotPort), tRot(drivePorts.tRotPort) {};
+				lRot(drivePorts.lRotPort), tRot(drivePorts.tRotPort) {
+					calibrateAll();
+				};
 
 			/// @brief Set the voltage of the motor groups
 			/// @param leftVoltage Voltage to set the left motor group to
@@ -700,12 +728,6 @@ namespace hyper {
 				right.move(rightSpeed);
 			}
 
-			/// @brief Tare the motor groups
-			void tare() {
-				left.tare_position();
-				right.tare_position();
-			}
-
 			/// @brief Get the average position of the motor groups (certain wires on our motor are broken so you MUST use this if you want a reliable position)
 			/// @return Average position of the motor groups
 			double positionMG() {
@@ -720,11 +742,10 @@ namespace hyper {
 			}
 		};
 
-		/// @brief Class to control autonomous PID routines for driving
+		/// @brief Class to control autonomous routines for driving
 		class DrivePID {
 		public:
 		private:
-
 			DriveIO* dio;
 
 			int delayMs = 20;
@@ -738,14 +759,18 @@ namespace hyper {
 			};
 			
 			static inline const KValues kTurn = {
-				1.0, 0.0, 0.0, 1.0
+				0.3, 0.0, 0.7, 1.0
 			};
 
 			static inline const KValues kMove = {
 				1.0, 0.0, 0.4, 3.0
 			};
 
-			static constexpr float inchesPerTick = 0.0002836;
+			struct InchesPerTick {
+				static constexpr float L_ROT_DIV_THEORETICAL = 0.0001096386338;
+				static constexpr float L_ROT_MUL_THEORETICAL = 9120.872500328438;
+				static constexpr float L_ROT_MUL_PRACTICAL = 5753.54167;
+			};
 
 			struct DrivePIDArgs {
 				DriveIO* dio;
@@ -764,7 +789,9 @@ namespace hyper {
 				
 				dio->tare();
 
-				pos /= inchesPerTick;
+				dio->resetEncoders();
+
+				pos *= InchesPerTick::L_ROT_MUL_PRACTICAL;
 
 				float error = pos;
 				float motorPos = 0;
@@ -776,11 +803,15 @@ namespace hyper {
 				float maxCycles = timeLimit / delayMs;
 				float cycles = 0;
 
+				bool lastOutPositive = pos > 0;
+				bool curOutPositive = pos > 0;
+				int outCycles = 0;
+
 				// with moving you just wanna move both MGsat the same speed
 
 				while (true) {
 					// get avg error
-					motorPos = dio->lRot.get_position();
+					motorPos = -dio->lRot.get_position();
 					error = pos - motorPos;
 
 					integral += error;
@@ -798,6 +829,16 @@ namespace hyper {
 
 					out /= reductionFactor;
 					dio->voltage(out, out);
+
+					curOutPositive = out > 0;
+					if (lastOutPositive != curOutPositive) {
+						outCycles++;
+					}
+					
+					if (outCycles > 3) {
+						pros::lcd::print(4, "PIDMove Out oscillating STOP");
+						break;
+					}
 
 					if (std::fabs(error) <= kv.threshold) {
 						break;
@@ -824,7 +865,9 @@ namespace hyper {
 			/// @param reductionFactor Factor to reduce the output by (higher value means lower speed)
 			/// @param timeLimit Time limit for the turn in milliseconds
 			void turn(double angle, float reductionFactor = 2, float timeLimit = 5000, const KValues& kv = DrivePID::kTurn) {
-				if (angle <= 0.01) { return; }
+				float absAngle = std::fabs(angle);
+
+				if (absAngle <= 0.01) { return; }
 
 				dio->imu.tare();
 				angle = naiveNormaliseAngle(angle);
@@ -846,7 +889,7 @@ namespace hyper {
 				float maxCycles = timeLimit / delayMs;
 				float cycles = 0;
 
-				if (std::fabs(angle) >= 180) {
+				if (std::fabs(absAngle) >= 180) {
 					turn180 = true;
 				}
 
@@ -1005,7 +1048,7 @@ namespace hyper {
 
 			void prepareArcadeLateral(float& lateral) {
 				// Change to negative to invert
-				lateral *= -1;
+				lateral *= 1;
 			}
 
 			// Calculate the movement of the robot when turning and moving laterally at the same time
@@ -1238,12 +1281,262 @@ namespace hyper {
 		}
 	}; // class GPSDiagnostic
 
+	/// @brief Screens and reports state of game elements being held by robot
+	class DynamicScreen : public AbstractComponent {
+	private:
+	protected:
+	public:
+		enum class State {
+			DETECTED,
+			UNDETECTED
+		};
+	private:
+		State state = State::UNDETECTED;
+
+		pros::Optical sensor;
+	public:
+		int proximityThreshold = 45; // Occlusion threshold
+
+		struct SensorPorts {
+			DigiPort optical;	
+		};
+
+		/// @brief Args for dynamic screen object
+		/// @param abstractComponentArgs Args for AbstractComponent object
+		struct DynamicScreenArgs {
+			AbstractComponentArgs abstractComponentArgs;
+			SensorPorts sensorPorts;
+		};
+
+		/// @brief Creates dynamic screen object
+		/// @param args Args for dynamic screen object (check args struct for more info)
+		DynamicScreen(DynamicScreenArgs args) : 
+			AbstractComponent(args.abstractComponentArgs),
+			sensor(args.sensorPorts.optical) {};
+
+		void opControl() {
+			// Detect for game element using proximity
+			// TODO: Implement multi-colour sorting
+
+			if (sensor.get_proximity() >= proximityThreshold) {
+				state = State::DETECTED;
+			} else {
+				state = State::UNDETECTED;
+			}
+
+			pros::lcd::print(2, ("Proximity: " + std::to_string(sensor.get_proximity())).c_str());
+		}
+
+		/// @brief Retrieve state of game elements
+		/// @return State of game elements
+		State getState() {
+			return state;
+		}
+
+	}; // class DynamicScreen
+
+	class Disperser : public AbstractComponent {
+	public:
+		// Struct to index motorGroupArray
+		struct MotorID {
+			const static uint8_t BOTTOM = 0;
+			const static uint8_t MID = 1;
+			const static uint8_t TOP = 2;
+		}; // struct MotorID
+
+		DynamicScreen* dynamicScreen;
+
+		// How many cycles to DELAY, how many cycles to STOP.
+		int delayCycles = 10;
+		int resetCycles = 200;
+
+		int currentCycles = 0;
+
+		// Replaced individual motor groups with an array for indexed access
+		std::array<pros::MotorGroup, 3> mgs;
+
+		/*void handleTopDetected() {
+			// if rejecting, stop mid and bot
+			mgs[MotorID::MID].move(0);
+			mgs[MotorID::BOTTOM].move(0);
+		}
+
+		void handleTopUndetected() {
+			// if not rejecting, spin mid and bot
+			mgs[MotorID::MID].move(127);
+			mgs[MotorID::BOTTOM].move(-127);
+		}*/
+
+		void handleTopDetected() {
+			currentCycles++;
+		}
+
+		void handleTopUndetected() {
+			currentCycles = 0;
+		}
+
+		void handleTLFallback() {
+			mgs[MotorID::MID].move(127);
+			mgs[MotorID::BOTTOM].move(-127);
+		}
+
+		void handleTopLower() {
+			if (currentCycles >= resetCycles) {
+				currentCycles = 0;
+			}
+
+			if (currentCycles <= delayCycles) {
+				// if not rejecting, spin mid and bot
+				handleTLFallback();
+			} else {
+				// if rejecting, stop mid and bot
+				mgs[MotorID::MID].move(0);
+				mgs[MotorID::BOTTOM].move(0);
+			}
+		}
+
+		void handleDynamicScreen() {
+			DynamicScreen::State state = dynamicScreen->getState();
+
+			switch (state) {
+				case DynamicScreen::State::DETECTED:
+					handleTopDetected();
+					break;
+				case DynamicScreen::State::UNDETECTED:
+					handleTopUndetected();
+					break;
+				default:
+					handleTopUndetected();
+					break;
+			}
+
+			// DEBUG: print current cycles
+			pros::lcd::print(4, ("Current Cycles: " + std::to_string(currentCycles)).c_str());
+		}
+
+		void handleTopGoal() {
+			// reverse spin MID and normal spin BOT and reverse spin TOP
+			mgs[MotorID::TOP].move(127);
+
+			handleTopLower();
+
+			//handleTLFallback();
+		}
+
+		void handleMidGoal() {
+			// normal spin MID normal spin BOT and TOP
+			mgs[MotorID::MID].move(127);
+			mgs[MotorID::BOTTOM].move(-127);
+			mgs[MotorID::TOP].move(-127);
+		}
+
+		void handleBottomGoal() {
+			// reverse spin MID and BOT
+			mgs[MotorID::BOTTOM].move(127);
+			mgs[MotorID::MID].move(127);
+		}
+
+		void handleIntake() {
+			// reverse spin MID and BOT		
+			mgs[MotorID::BOTTOM].move(-127);
+			mgs[MotorID::MID].move(-127);
+		}
+
+		void handleSingleMid() {
+			// JUST normal spin mid
+			mgs[MotorID::MID].move(-127);
+		}
+
+		void handleStop() {
+			for (pros::MotorGroup& mg : mgs) {
+				mg.move(0);
+			}
+		}
+	private:
+	protected:
+	public:
+		struct DisperserPorts {
+			MGPorts bottom;
+			MGPorts mid;
+			MGPorts top;
+		};
+
+		/// @brief Args for disperser object
+		/// @param abstractComponentArgs Args for AbstractComponent object
+		struct DisperserArgs {
+			AbstractComponentArgs abstractComponentArgs;
+			DisperserPorts ports;
+			DynamicScreen* dynamicScreen;
+		};
+
+		/// @brief Creates disperser object
+		/// @param args Args for disperser object (check args struct for more info)
+		Disperser(DisperserArgs args) : 
+			AbstractComponent(args.abstractComponentArgs),
+			// Initialize array elements with the provided port groups
+			mgs{
+				pros::MotorGroup(args.ports.bottom),
+				pros::MotorGroup(args.ports.mid),
+				pros::MotorGroup(args.ports.top)
+			},
+			dynamicScreen(args.dynamicScreen) {};
+
+		void opControl() override {
+			handleDynamicScreen();
+
+			if (master->get_digital(pros::E_CONTROLLER_DIGITAL_L1)) {
+				handleTopGoal();
+			} else if (master->get_digital(pros::E_CONTROLLER_DIGITAL_L2)) {
+				handleMidGoal();
+			} else if (master->get_digital(pros::E_CONTROLLER_DIGITAL_R2)) {
+				handleIntake();
+			} else if (master->get_digital(pros::E_CONTROLLER_DIGITAL_R1)) {
+				handleBottomGoal();
+			} else if (master->get_digital(pros::E_CONTROLLER_DIGITAL_A)) {
+				handleSingleMid();
+			} else {
+				handleStop();
+			}
+		}
+	}; // class Disperser
+
+	class ForkMech : public AbstractMech {
+	private:
+		BtnManager btnMgr;
+	protected:
+	public:
+		/// @brief Args for fork mechanism object
+		/// @param abstractComponentArgs Args for AbstractComponent object
+		struct ForkMechArgs {
+			AbstractMechArgs abstractMechArgs;
+			pros::controller_digital_e_t btn = pros::E_CONTROLLER_DIGITAL_LEFT;
+		};
+
+		/// @brief Creates fork mechanism object
+		/// @param args Args for fork mechanism object (check args struct for more info)
+		ForkMech(ForkMechArgs args) : 
+			AbstractMech(args.abstractMechArgs),
+			btnMgr({{args.abstractMechArgs.abstractComponentArgs}, 
+				{args.btn, {std::bind(&ForkMech::toggle, this)}, {}, {}}
+			}) {};
+
+		void opControl() override {
+			btnMgr.opControl();
+		}
+	}; // class ForkMech
+
 	/// @brief Class which manages all components
 	class ComponentManager : public AbstractComponent {
 	private:
 	protected:
 	public:
 		Drivetrain::DriveManager drive;
+
+		DynamicScreen screen;
+
+		Disperser disp;
+
+		ForkMech fork;
 
 		Timer timer;
 		
@@ -1252,8 +1545,12 @@ namespace hyper {
 
 		/// @brief Args for component manager object passed to the chassis, such as ports
 		/// @param dvtPorts Ports for drivetrain
+		/// @param dispPorts Ports for disperser
 		struct ComponentManagerUserArgs {
 			Drivetrain::DriveManager::DriveManagerUserArgs driveArgs;
+			Disperser::DisperserPorts dispPorts;
+			DynamicScreen::SensorPorts screenPorts;
+			AnalogPort forkPort;
 		};
 
 		/// @brief Args for component manager object
@@ -1270,12 +1567,18 @@ namespace hyper {
 			AbstractComponent(args.aca),
 
 			drive({args.aca, args.user.driveArgs}),	
+			screen({args.aca, args.user.screenPorts}),
+			disp({args.aca, args.user.dispPorts, &screen}),
+			fork({{{args.aca, args.user.forkPort}}}),
 			timer({args.aca}) {
 				// Add component pointers to vector
 				// MUST BE DONE AFTER INITIALISATION not BEFORE because of pointer issues
 				components = {
 					&drive,
-					&timer
+					&disp,
+					&timer,
+					&fork,
+					&screen
 				};
 			};
 
@@ -1324,16 +1627,75 @@ namespace hyper {
 
 	class MatchAuton : public AbstractAuton {
 	private:
-		void defaultAuton() {
+		void defaultLeft() {
+			cm->fork.actuate(false);
+			cm->disp.handleIntake();
 
+			cm->drive.pid.lateral(17.5, 3);
+
+			pros::delay(1000);
+			
+			cm->drive.pid.turn(70, 2, 2500);
+			pros::lcd::print(0, "Stopping");
+			cm->disp.handleStop();
+			//cm->fork.actuate(true);
+
+			pros::delay(250);
+			pros::lcd::print(0, "TLAT Start");
+			cm->drive.pid.lateral(15, 4, 2500);
+			pros::lcd::print(0, "TLAT End");
+			pros::delay(250);
+			
+			cm->disp.handleMidGoal();
+			pros::delay(5000);
+		}
+
+		void defaultRight() {
+			// Mirror of defaultLeft: invert turn angles and use bottom goal instead of mid goal
+			cm->fork.actuate(false);
+			cm->disp.handleIntake();
+
+			cm->drive.pid.lateral(20, 4);
+
+			pros::delay(1000);
+
+			//cm->drive.pid.lateral(-2, 4, 1000); // small back up to align with goal
+
+			pros::delay(500);
+
+			cm->drive.pid.turn(-70, 2, 2500); // inverted angle
+
+			pros::lcd::print(0, "Stopping");
+			cm->disp.handleStop();
+
+			// was told not to deploy - just dont? alr ig :)))
+			//cm->fork.actuate(true);
+
+			pros::delay(250);
+			pros::lcd::print(0, "TLAT Start");
+			cm->drive.pid.lateral(14, 4, 3000);
+			pros::lcd::print(0, "TLAT End");
+
+			cm->disp.handleBottomGoal(); // bottom goal instead of mid goal
+			pros::delay(5000);
 		}
 
 		void testRight90() {
 			
 		}
 
-		void testFwd4Tiles() {
+		void testTinyLat() {
+			pros::delay(1000);
+			cm->drive.pid.lateral(10, 4);
+			pros::delay(10000);
+		}
 
+		void testFwd2Tiles() {
+			cm->drive.pid.lateral(48);
+		}
+
+		void testMechs() {
+			cm->fork.actuate(false);
 		}
 	protected:
 	public:
@@ -1348,18 +1710,26 @@ namespace hyper {
 		MatchAuton(MatchAutonArgs args) : 
 			AbstractAuton(args.autonArgs) {};
 
-		// TODO: Implement
 		void run() override {
-			defaultAuton();
+			defaultLeft();
+			//defaultRight();
+
 			//testRight90();
-			//testFwd4Tiles();
+			//testFwd2Tiles();
+			//testTinyLat();
+			//testMechs();
 		}
 	}; // class MatchAuton
 
 	class SkillsAuton : public AbstractAuton {
 	private:
 		void sector1() {
-			cm->drive.pid.lateral(48);
+			cm->fork.actuate(false);
+
+			cm->drive.pid.lateral(40);
+			cm->disp.handleMidGoal();
+
+			pros::delay(10000);	
 		}
 		
 		void sector2() {
@@ -1453,7 +1823,18 @@ hyper::AbstractChassis* currentChassis;
 
 void initDefaultChassis() {
 	static hyper::Chassis defaultChassis({
-		{{{LEFT_DRIVE_PORTS, RIGHT_DRIVE_PORTS, IMU_PORT, ROT_DRIVE_PORT}}} // Drivetrain MGs and IMU ports
+		{
+			// ComponentManagerUserArgs
+			{
+				// Drivetrain args
+				{{LEFT_DRIVE_PORTS, RIGHT_DRIVE_PORTS, IMU_PORT, LAT_ROT_DRIVE_PORT}},
+				// Disperser ports
+				{DISP_BOT_PORTS, DISP_MID_PORTS, DISP_TOP_PORTS},
+				// Dynamic screen ports
+				{SCREEN_TOP_PORT},
+				{FORK_MECH_PORT}
+			}
+		}
 	});
 	
 	currentChassis = &defaultChassis;

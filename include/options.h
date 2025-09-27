@@ -8,20 +8,37 @@
 // Main opcontrol function to use
 #define CURRENT_OPCONTROL mainControl
 
-//Sensor ports 
+// Analog ports
 
-// Ports for telemetry
+#define FORK_MECH_PORT 'H'
+
+// Telemetry ports
+
 // IMU
-#define IMU_PORT 12
-// Rotary encoder
-#define ROT_DRIVE_PORT 2
+#define IMU_PORT 16
+// Rotary encoder (Lateral)
+#define LAT_ROT_DRIVE_PORT 12
 // AI Vision
 #define AI_VISION_PORT 3
 // GPS Port
 #define GPS_PORT 4
 
+// Optical Sensors for Dynamic Screen
+#define SCREEN_TOP_PORT 6
+
+// Primary Disperser MGs
+
+// (Intake) R1: normal spin BOT and normal spin MID
+// (Bot Goal) R2: reverse spin MID and reverse spin BOT
+// (Mid Goal) L2: reverse spin MID and normal spin BOT
+// (Top Goal) L1: reverse spin MID and normal spin BOT and reverse spin TOP
+
+#define DISP_BOT_PORTS {11}
+#define DISP_MID_PORTS {17}
+#define DISP_TOP_PORTS {9}
+
 // Turn on/off auton and opcontrol
-#define DO_MATCH_AUTON false
+#define DO_MATCH_AUTON true
 #define DO_SKILLS_AUTON false
 
 // Turn on for skills prep/post auton/opcontrol functions to be run on components
@@ -29,9 +46,10 @@
 #define DO_POST_AUTON true
 #define DO_OP_CONTROL true
 
-// Ports for the drivetrain motors
-#define LEFT_DRIVE_PORTS {20, 19, 18}
-#define RIGHT_DRIVE_PORTS {-17, -16, -14}
+// Drivetrain Ports
+
+#define LEFT_DRIVE_PORTS {-15, -14, -13}
+#define RIGHT_DRIVE_PORTS {20, 8, 21}
 
 // Chassis class to use (default is initDefaultChassis)
 #define INIT_CHASSIS initDefaultChassis

@@ -37,11 +37,13 @@ _This list does not contain all roles, only those most relevant to programming._
 
 - Created with [`PROS` API](https://github.com/purduesigbots/pros)
 as this has better documentation than the official VEX API.
-- Outside of `PROS` and the C++ standard library, our code uses **no external libraries** to write our code - all features are **custom-built** entirely *in-house*.
+- Uses [`nlohmann/json`](https://github.com/nlohmann/json) to save diagnostic data to disk.
+- C++20 Standard Library as provided by ARM GCC
+- Outside of `PROS`, our code uses **no external VEX helper library such as Lemlib** to write our code - all features are **custom-built** entirely *in-house*.
 
 ## Project Structure
 
-To run Make, first install [ARM G++](https://developer.arm.com/downloads/-/arm-gnu-toolchain-downloads).
+To run the Makefile, first install [ARM G++](https://developer.arm.com/downloads/-/arm-gnu-toolchain-downloads).
 
 - **Main file** at `src/main.cpp`.
 - **Includes** in `include/main.h`.
