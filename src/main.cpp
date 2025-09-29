@@ -784,7 +784,7 @@ namespace hyper {
 			/// @brief Move to a specific position using PID
 			/// @param pos Position to move to in inches (use negative for backward)
 			// TODO: Tuning required
-			void lateral(double pos, float reductionFactor = 2, float timeLimit = 5000, const KValues& kv = DrivePID::kMove) {
+			void lateral(double pos, float reductionFactor = 2, float timeLimit = 5000, bool doBadThing = false, std::function<void()> badFunc = []() {}, const KValues& kv = DrivePID::kMove) {
 				if (pos <= 0.01) { return; }
 				
 				dio->tare();
@@ -806,6 +806,8 @@ namespace hyper {
 				bool lastOutPositive = pos > 0;
 				bool curOutPositive = pos > 0;
 				int outCycles = 0;
+
+				bool reallyBadBool = true;
 
 				// with moving you just wanna move both MGsat the same speed
 
@@ -835,6 +837,12 @@ namespace hyper {
 						outCycles++;
 					}
 					
+					// TODO: REFACTOR THIS BECAUSE ITS TERRIBLE
+					if (doBadThing && (pos >= 43151.562525) && reallyBadBool) {
+						reallyBadBool = false;
+						badFunc();	
+					}
+
 					if (outCycles > 3) {
 						pros::lcd::print(4, "PIDMove Out oscillating STOP");
 						break;
@@ -1642,7 +1650,9 @@ namespace hyper {
 
 			pros::delay(250);
 			pros::lcd::print(0, "TLAT Start");
-			cm->drive.pid.lateral(15, 4, 2500);
+			cm->drive.pid.lateral(15, 4, 2500, true, [this]() {
+				this->cm->fork.actuate(true);
+			});
 			pros::lcd::print(0, "TLAT End");
 			pros::delay(250);
 			
