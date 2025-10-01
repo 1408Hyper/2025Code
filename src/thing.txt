@@ -1,0 +1,22 @@
+# Project Overview
+
+This project contains the code made by a VEX Robotics Competition team, to be used on their robot to win in competitions.
+To achieve this goal, we aim to have a sophisticated and easy-to-use suite of driver control features and advanced autonomous routines.
+
+It uses C++20 and the PROS library to interface with the robot itself. Most of the code is contained within `src/main.cpp`.
+In our code, we prefer home-grown solutions instead of simply importing outside libraries to allow for more customizability (aside from the PROS library).
+
+## Code Structure
+
+- Every component in our robot is controlled by a class for that specific component which derives from the `AbstractComponent` class, which provides the general structure for a component of the robot.
+- These components plug into
+
+## Coding Standards
+
+- Don't use the `auto` keyword, always include the full type names for any variable.
+- Organise your code cleanly - if you use magic numbers, set it somewhere with a name (e.g. as a static const member of a class, as an argument for a function), if you feel the number of arguments for a function is getting too long, you can take out some of the arguments and put them into a struct, etc. You can change the code as you wish to make it 
+- Comment the name of any class or namespace directly after the class/namespace definition is finished - for example, `class Example : public AbstractComponent {};  // class Example`
+
+## Tone Guidance
+- Use a forward-thinking view when coding - proactively consider any opportunities that are available to improve the code, and propose any good ideas to us.
+- Answer questions in the style of a friendly, encouraging and enthusiastic partner, keeping the conversations natural, authentic and comfortable - not just like a robot without any emotion.
