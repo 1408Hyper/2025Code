@@ -785,7 +785,7 @@ namespace hyper {
 			/// @param pos Position to move to in inches (use negative for backward)
 			// TODO: Tuning required
 			void lateral(double pos, float reductionFactor = 2, float timeLimit = 5000, bool doBadThing = false, std::function<void()> badFunc = []() {}, const KValues& kv = DrivePID::kMove) {
-				if (pos <= 0.01) { return; }
+				if (std::fabs(pos) <= 0.01) { return; }
 				
 				dio->tare();
 
@@ -1689,9 +1689,63 @@ namespace hyper {
 			cm->disp.handleBottomGoal(); // bottom goal instead of mid goal
 			pros::delay(5000);
 		}
+		void advancedAuton() {
+			// Mirror of defaultLeft: invert turn angles and use bottom goal instead of mid goal
+			cm->fork.actuate(false);
+			
+
+			cm->drive.pid.lateral(21,2);
+
+			
+
+			//cm->drive.pid.lateral(-2, 4, 1000); // small back up to align with goal
+
+			pros::delay(500);
+
+			cm->drive.pid.turn(95, 2, 2500); // inverted angle
+
+			pros::lcd::print(0, "Stopping");
+			cm->disp.handleIntake();
+			pros::delay(1000);
+			cm->fork.actuate(true);
+
+			// was told not to deploy - just dont? alr ig :)))
+			//cm->fork.actuate(true);
+
+			pros::delay(250);
+			pros::lcd::print(0, "TLAT Start");
+			cm->drive.pid.lateral(14, 4, 3000);
+			pros::delay(1000);
+			cm->drive.pid.lateral(-10,2);
+			pros::delay(500);
+
+			cm->disp.handleStop();
+			pros::lcd::print(0, "TLAT End");
+			cm->drive.pid.turn(185, 2, 2500); // inverted angle
+			 // bottom goal instead of mid goal
+			pros::delay(500);
+			cm->drive.pid.lateral(10, 2);
+			pros::delay(500);
+			cm->disp.handleTopGoal();
+			pros::delay(5000);
+			cm->disp.handleStop();
+			cm->drive.pid.lateral(-12, 2);
+			pros::delay(500);
+			cm->drive.pid.turn(-55, 2, 2500); // inverted angle
+			pros::delay(500);
+			cm->drive.pid.lateral(45, 2);
+			pros::delay(500);
+			cm->disp.handleBottomGoal();
+			pros::delay(5000);
+		}
 
 		void testRight90() {
 			
+		}
+
+		void testReverse() {
+			cm->drive.pid.lateral(-15);
+			pros::delay(10000);
 		}
 
 		void testTinyLat() {
@@ -1721,13 +1775,14 @@ namespace hyper {
 			AbstractAuton(args.autonArgs) {};
 
 		void run() override {
-			defaultLeft();
+			//defaultLeft();
 			//defaultRight();
-
+			advancedAuton();
 			//testRight90();
 			//testFwd2Tiles();
 			//testTinyLat();
 			//testMechs();
+			//testReverse();
 		}
 	}; // class MatchAuton
 
