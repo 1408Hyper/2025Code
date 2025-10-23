@@ -35,7 +35,7 @@
 
 #define DISP_BOT_PORTS {11}
 #define DISP_MID_PORTS {17}
-#define DISP_TOP_PORTS {9}
+#define DISP_TOP_PORTS {-9}
 
 // Turn on/off auton and opcontrol
 #define DO_MATCH_AUTON true

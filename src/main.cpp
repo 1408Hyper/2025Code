@@ -772,6 +772,63 @@ namespace hyper {
 				static constexpr float L_ROT_MUL_PRACTICAL = 5753.54167;
 			};
 
+
+
+			/// @brief Manages checkpoint triggering during lateral PID movements
+			struct CheckpointManager {
+			public:
+				/// @brief Checkpoint structure for triggering functions at specific distances during lateral movement
+				/// @param distanceInches Distance in inches (from start position) at which to trigger the action
+				/// @param action Function to execute when checkpoint is reached
+				struct Checkpoint {
+					float distanceInches;
+					VoidFunc action;
+				};
+
+				using Checkpoints = vector<Checkpoint>;
+			private:
+				vector<float> checkpointDistancesTicks;
+				vector<bool> available;
+				const Checkpoints& checkpoints;
+				bool movingForward;
+			protected:
+			public:
+				/// @brief Initializes checkpoint manager with converted distances
+				/// @param checkpoints Reference to checkpoint vector
+				/// @param direction True if moving forward, false if moving backward
+				CheckpointManager(const Checkpoints& checkpoints, bool direction) : 
+					checkpoints(checkpoints),
+					movingForward(direction),
+					available(checkpoints.size(), true) {
+					
+					// Convert all checkpoint distances from inches to encoder ticks
+					checkpointDistancesTicks.reserve(checkpoints.size());
+					for (const Checkpoint& checkpoint : checkpoints) {
+						checkpointDistancesTicks.push_back(checkpoint.distanceInches * InchesPerTick::L_ROT_MUL_PRACTICAL);
+					}
+				}
+
+				/// @brief Checks and triggers any checkpoints that have been reached
+				/// @param currentPositionTicks Current position in encoder ticks
+				void check(float currentPositionTicks) {
+					for (size_t i = 0; i < checkpoints.size(); i++) {
+						if (available[i]) {
+							bool shouldTrigger = false;
+							if (movingForward) {
+								shouldTrigger = currentPositionTicks >= checkpointDistancesTicks[i];
+							} else {
+								shouldTrigger = currentPositionTicks <= checkpointDistancesTicks[i];
+							}
+
+							if (shouldTrigger) {
+								checkpoints[i].action();
+								available[i] = false;
+							}
+						}
+					}
+				}
+			}; // struct CheckpointManager
+
 			struct DrivePIDArgs {
 				DriveIO* dio;
 			};
@@ -783,15 +840,23 @@ namespace hyper {
 
 			/// @brief Move to a specific position using PID
 			/// @param pos Position to move to in inches (use negative for backward)
+			/// @param reductionFactor Factor to reduce the output by (higher value means lower speed)
+			/// @param timeLimit Time limit for the movement in milliseconds
+			/// @param kv PID tuning values
+			/// @param checkpoints Vector of checkpoints to trigger functions at specific distances
 			// TODO: Tuning required
-			void lateral(double pos, float reductionFactor = 2, float timeLimit = 5000, bool doBadThing = false, std::function<void()> badFunc = []() {}, const KValues& kv = DrivePID::kMove) {
+			void lateral(double pos, float reductionFactor = 2, float timeLimit = 5000, const CheckpointManager::Checkpoints& checkpoints = {}, const KValues& kv = DrivePID::kMove) {
 				if (std::fabs(pos) <= 0.01) { return; }
 				
 				dio->tare();
-
 				dio->resetEncoders();
 
+				// Convert target position to encoder ticks
 				pos *= InchesPerTick::L_ROT_MUL_PRACTICAL;
+
+				// Initialize checkpoint manager
+				bool movingForward = pos > 0;
+				CheckpointManager checkpointMgr(checkpoints, movingForward);
 
 				float error = pos;
 				float motorPos = 0;
@@ -807,15 +872,17 @@ namespace hyper {
 				bool curOutPositive = pos > 0;
 				int outCycles = 0;
 
-				bool reallyBadBool = true;
-
-				// with moving you just wanna move both MGsat the same speed
+				// with moving you just wanna move both MGs at the same speed
 
 				while (true) {
-					// get avg error
+					// Get current position
 					motorPos = -dio->lRot.get_position();
 					error = pos - motorPos;
 
+					// Check and trigger checkpoints
+					checkpointMgr.check(motorPos);
+
+					// PID calculations
 					integral += error;
 					// Anti windup
 					if (std::fabs(error) < kv.threshold) {
@@ -835,12 +902,6 @@ namespace hyper {
 					curOutPositive = out > 0;
 					if (lastOutPositive != curOutPositive) {
 						outCycles++;
-					}
-					
-					// TODO: REFACTOR THIS BECAUSE ITS TERRIBLE
-					if (doBadThing && (pos >= 43151.562525) && reallyBadBool) {
-						reallyBadBool = false;
-						badFunc();	
 					}
 
 					if (outCycles > 3) {
@@ -872,6 +933,7 @@ namespace hyper {
 			/// @param angle Angle to move to (PASS IN THE RANGE OF -180 TO 180 for left and right)
 			/// @param reductionFactor Factor to reduce the output by (higher value means lower speed)
 			/// @param timeLimit Time limit for the turn in milliseconds
+			/// @param kv PID tuning values
 			void turn(double angle, float reductionFactor = 2, float timeLimit = 5000, const KValues& kv = DrivePID::kTurn) {
 				float absAngle = std::fabs(angle);
 
@@ -954,6 +1016,12 @@ namespace hyper {
 
 				pros::lcd::print(2, "PIDTurn End");
 				dio->stop();
+			}
+
+			/// @brief 180 deg turning - turn(180) can be buggy, this is ALWAYS the latest practical solution to achieve this.
+			void uTurn() {
+				turn(90);
+				turn(90);
 			}
 
 			// New unified PID movement function (under development)
@@ -1650,9 +1718,12 @@ namespace hyper {
 
 			pros::delay(250);
 			pros::lcd::print(0, "TLAT Start");
-			cm->drive.pid.lateral(15, 4, 2500, true, [this]() {
+			
+			// to be implemented once our lateral function accepts dynamic checkpoint triggers
+			/*cm->drive.pid.lateral(15, 4, 2500, true, [this]() {
 				this->cm->fork.actuate(true);
-			});
+			});*/
+			
 			pros::lcd::print(0, "TLAT End");
 			pros::delay(250);
 			
@@ -1689,6 +1760,7 @@ namespace hyper {
 			cm->disp.handleBottomGoal(); // bottom goal instead of mid goal
 			pros::delay(5000);
 		}
+
 		void advancedAuton() {
 			// Mirror of defaultLeft: invert turn angles and use bottom goal instead of mid goal
 			cm->fork.actuate(false);
@@ -1739,6 +1811,42 @@ namespace hyper {
 			pros::delay(5000);
 		}
 
+		// NG = New Generation
+		// Cleansheet design, cleansheeet ideas.
+		void ngLeft() {
+			// Prepare: Fork enabled
+			cm->fork.actuate(true);
+
+			// Advance to RIGHT/0.5, turn 90 towards RIGHT/0, advance towards RIGHT/0, spin to intake
+			cm->drive.pid.lateral(23);
+			cm->drive.pid.turn(95);
+			cm->fork.actuate(false);
+			cm->disp.handleIntake();
+			cm->drive.pid.lateral(8,4);
+
+			// Get blocks from RIGHT/0
+			pros::delay(1000);
+
+			// Reverse to RIGHT/0.5, uturn towards RIGHT/1, advance towards RIGHT/1
+			cm->drive.pid.lateral(-6);
+			cm->drive.pid.uTurn();
+			cm->disp.handleStop();
+			cm->fork.actuate(true);
+			cm->drive.pid.lateral(8);
+
+			// Set blocks to RIGHT/1, stop disp
+			cm->disp.handleTopGoal();
+			pros::delay(5000);
+			cm->disp.handleStop();
+
+			// Reverse to RIGHT/0.75, turn towards MID/0.5, capture CROSS/X
+			cm->drive.pid.lateral(-5);
+		}
+
+		void ngRight() {
+
+		}
+
 		void testRight90() {
 			
 		}
@@ -1776,10 +1884,16 @@ namespace hyper {
 
 		void run() override {
 			//defaultLeft();
-			//defaultRight();
-			advancedAuton();
+			defaultRight();
+			
+			//advancedAuton();
+			
+			//ngLeft();
+			//ngRight();
+
 			//testRight90();
 			//testFwd2Tiles();
+			
 			//testTinyLat();
 			//testMechs();
 			//testReverse();
