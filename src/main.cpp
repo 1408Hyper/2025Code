@@ -6,20 +6,41 @@
 // pros
 
 /// @brief Hyper namespace for all custom classes and functions
-namespace hyper {
+namespace hyper
+{
+	// 2nd reminder: all usings should be in main.h!
+
+	// User defined literals
+
+	namespace literals {
+		namespace dist {
+			// TODO: Implement inches literalss
+			struct InchesPerTick {
+				static constexpr float L_ROT_DIV_THEORETICAL = 0.0001096386338;
+				static constexpr float L_ROT_MUL_THEORETICAL = 9120.872500328438;
+				static constexpr float L_ROT_MUL_PRACTICAL = 5753.54167;
+			};
+
+			// Unified single source of truth for tick-inches conversion
+			
+		} // namespace dist
+	} // namespace literals
+
 	// Structs
 
 	/// @brief Struct for motor group buttons (manual control)
 	/// @param fwd Button for forward
 	/// @param back Button for backward
 
-	struct Buttons {
+	struct Buttons
+	{
 		pros::controller_digital_e_t fwd;
 		pros::controller_digital_e_t back;
 	};
 
 	/// @brief Struct for motor move bounds
-	struct MotorBounds {
+	struct MotorBounds
+	{
 		static constexpr float SCALE_MIN = 0;
 		static constexpr float SCALE_MAX = 1;
 
@@ -32,7 +53,8 @@ namespace hyper {
 	/// @brief Base struct for any values on the horizontal axis
 	/// @param left Left side value
 	/// @param right Right side value
-	struct Horizontal {
+	struct Horizontal
+	{
 		float left;
 		float right;
 	};
@@ -40,7 +62,8 @@ namespace hyper {
 	/// @brief Vertical axis struct
 	/// @param low Low value
 	/// @param high High value
-	struct Vertical {
+	struct Vertical
+	{
 		float low;
 		float high;
 	};
@@ -51,15 +74,18 @@ namespace hyper {
 	/// @param vec Vector to convert
 	/// @param delimiter Delimiter to separate elements
 	template <typename T>
-	string vectorToString(vector<T>& vec, string delimiter) {
+	string vectorToString(vector<T> &vec, string delimiter)
+	{
 		int vecSize = vec.size();
 		int vecSizeMinusOne = vecSize - 1;
 		std::ostringstream oss;
 
 		oss << "{";
-		for (int i = 0; i < vecSize; i++) {
+		for (int i = 0; i < vecSize; i++)
+		{
 			oss << vec[i];
-			if (i < vecSizeMinusOne) {
+			if (i < vecSizeMinusOne)
+			{
 				oss << delimiter;
 			}
 		}
@@ -71,7 +97,8 @@ namespace hyper {
 	/// @brief Assert that a value is arithmetic
 	/// @param val Value to assert
 	template <typename T>
-	void assertArithmetic(const T val) {
+	void assertArithmetic(const T val)
+	{
 		static_assert(std::is_arithmetic<T>::value, "Value must be arithmetic");
 	}
 
@@ -79,11 +106,13 @@ namespace hyper {
 	/// @param channel Color to check
 	/// @param target Target colour which the colour should be
 	/// @return Whether the channel is within tolerance
-	bool channelWithinTolerance(const float& channel, const float& target, const float& tolerance = 5) {
+	bool channelWithinTolerance(const float &channel, const float &target, const float &tolerance = 5)
+	{
 		return std::fabs(channel - target) <= tolerance;
 	}
 
-	std::int32_t prepareMoveSpeed(float raw) {
+	std::int32_t prepareMoveSpeed(float raw)
+	{
 		// Round the number to the nearest integer
 		raw = std::round(raw);
 
@@ -98,19 +127,24 @@ namespace hyper {
 	/// @param min Minimum value
 	/// @param max Maximum value
 	template <typename T>
-	bool isNumBetween(T num, T min, T max) {
+	bool isNumBetween(T num, T min, T max)
+	{
 		return ((num >= min) && (num <= max));
 	}
 
 	/// @brief Normalise an angle to the range [-180, 180]
 	/// @param angle Angle to normalise
 	template <typename T>
-	T normaliseAngle(T angle) {
+	T normaliseAngle(T angle)
+	{
 		assertArithmetic(angle);
 
-		if (angle > 180) {
+		if (angle > 180)
+		{
 			angle -= 360;
-		} else if (angle < -180) {
+		}
+		else if (angle < -180)
+		{
 			angle += 360;
 		}
 
@@ -120,7 +154,8 @@ namespace hyper {
 	/// @brief Naively normalise an angle to the range [-180, 180] by simply clamping the value
 	/// @param angle Angle to normalise
 	template <typename T>
-	T naiveNormaliseAngle(T angle) {
+	T naiveNormaliseAngle(T angle)
+	{
 		assertArithmetic(angle);
 
 		angle = std::clamp(angle, -180.0, 180.0);
@@ -133,7 +168,8 @@ namespace hyper {
 	/// @param size Size of the vector
 	/// @return Mean of the vector (type T)
 	template <typename T>
-	T calcMeanFromVector(const vector<T>& vec, int size) {
+	T calcMeanFromVector(const vector<T> &vec, int size)
+	{
 		T sum = std::accumulate(vec.begin(), vec.end(), 0);
 		T mean = sum / size;
 
@@ -144,7 +180,8 @@ namespace hyper {
 	/// @param vec Vector to calculate the mean of
 	/// @return Mean of the vector (type T)
 	template <typename T>
-	T calcMeanFromVector(const vector<T>& vec) {
+	T calcMeanFromVector(const vector<T> &vec)
+	{
 		int size = vec.size();
 		T sum = std::accumulate(vec.begin(), vec.end(), 0);
 		T mean = sum / size;
@@ -155,10 +192,12 @@ namespace hyper {
 	// Class declarations
 
 	/// @brief Abstract chassis class for if you want a custom chassis class
-	class AbstractChassis {
+	class AbstractChassis
+	{
 	private:
 	protected:
 		pros::Controller master{pros::E_CONTROLLER_MASTER};
+
 	public:
 		/// @brief Creates abstract chassis object
 		AbstractChassis() {};
@@ -166,7 +205,8 @@ namespace hyper {
 		virtual ~AbstractChassis() = default;
 
 		/// @brief Gets the controller
-		pros::Controller& getController() {
+		pros::Controller &getController()
+		{
 			return master;
 		}
 
@@ -178,12 +218,14 @@ namespace hyper {
 	}; // class AbstractChassis
 
 	/// @brief Class for components of the chassis to derive from
-	class AbstractComponent {
+	class AbstractComponent
+	{
 	private:
 	protected:
-		AbstractChassis* chassis;
+		AbstractChassis *chassis;
 
-		pros::Controller* master;
+		pros::Controller *master;
+
 	public:
 		static constexpr std::uint8_t MAX_BRAIN_LINES = 8;
 		static constexpr std::uint8_t MAX_CONTROLLER_LINES = 2;
@@ -191,15 +233,15 @@ namespace hyper {
 
 		/// @brief Args for AbstractComponent object
 		/// @param chassis AbstractChassis derived object to be used for the component
-		struct AbstractComponentArgs {
-			AbstractChassis* chassis;
+		struct AbstractComponentArgs
+		{
+			AbstractChassis *chassis;
 		};
 
 		/// @brief Creates AbstractComponent object
 		/// @param args Args AbstractComponent object (check args struct for more info)
-		AbstractComponent(AbstractComponentArgs args) : 
-		chassis(args.chassis),
-		master(&args.chassis->getController()) {};
+		AbstractComponent(AbstractComponentArgs args) : chassis(args.chassis),
+														master(&args.chassis->getController()) {};
 
 		/// @brief Log something to the brain safely
 		/// @param line Line to print the message on (check class consts for max lines)
@@ -207,8 +249,10 @@ namespace hyper {
 		/// @param additional Additional arguments to print
 		/// @return Success/fail state of the brain printing
 		template <typename... T>
-		bool log(const std::uint8_t line, const string& message, T&&... additional) {
-			if (line > MAX_BRAIN_LINES) {
+		bool log(const std::uint8_t line, const string &message, T &&...additional)
+		{
+			if (line > MAX_BRAIN_LINES)
+			{
 				return false;
 			}
 
@@ -222,8 +266,10 @@ namespace hyper {
 		/// @param additional Additional arguments to print
 		/// @return Success/fail state of the controller printing
 		template <typename... T>
-		bool tell(const std::uint8_t line, const string& message, T&&... additional) {
-			if (line > MAX_CONTROLLER_LINES) {
+		bool tell(const std::uint8_t line, const string &message, T &&...additional)
+		{
+			if (line > MAX_CONTROLLER_LINES)
+			{
 				return false;
 			}
 
@@ -231,11 +277,13 @@ namespace hyper {
 			return true;
 		}
 
-		AbstractChassis& getChassis() {
+		AbstractChassis &getChassis()
+		{
 			return *chassis;
 		}
 
-		pros::Controller& getMaster() {
+		pros::Controller &getMaster()
+		{
 			return *master;
 		}
 
@@ -248,48 +296,54 @@ namespace hyper {
 	}; // class ChassisComponent
 
 	/// @brief Abstract pneumatic mechanism class for custom mech classes
-	class AbstractMech : public AbstractComponent {
+	class AbstractMech : public AbstractComponent
+	{
 	private:
 		bool engaged = false;
 
 		pros::adi::DigitalOut piston;
+
 	protected:
 	public:
 		/// @brief Args for abstract mech object
 		/// @param abstractComponentArgs Args for AbstractComponent object
 		/// @param pistonPort Port for piston
-		struct AbstractMechArgs {
+		struct AbstractMechArgs
+		{
 			AbstractComponentArgs abstractComponentArgs;
 			char pistonPort;
 		};
 
 		/// @brief Creates abstract mech object
 		/// @param args Args for abstract mech object (check args struct for more info)
-		AbstractMech(AbstractMechArgs args) : 
-			AbstractComponent(args.abstractComponentArgs),
-			piston(args.pistonPort) {};
+		AbstractMech(AbstractMechArgs args) : AbstractComponent(args.abstractComponentArgs),
+											  piston(args.pistonPort) {};
 
 		/// @brief Sets actuation value of piston
 		/// @param value Value to set the piston to
-		void actuate(bool value) {
+		void actuate(bool value)
+		{
 			piston.set_value(value);
 			engaged = value;
 		}
 
 		/// @brief Toggles the piston state
-		void toggle() {
+		void toggle()
+		{
 			actuate(!engaged);
 		}
 
 		/// @brief Gets the piston object
 		/// @return PROS ADI DigitalOut object for piston
-		pros::adi::DigitalOut& getPiston() {
+		pros::adi::DigitalOut &getPiston()
+		{
 			return piston;
 		}
 
 		/// @brief Gets the engaged state of the mech
 		/// @return Engaged state of the mech
-		bool getEngaged() {
+		bool getEngaged()
+		{
 			return engaged;
 		}
 
@@ -297,12 +351,15 @@ namespace hyper {
 	}; // class AbstractMech
 
 	/// @brief Abstract motor group class for if you want a custom motor group class
-	class AbstractMG : public AbstractComponent {
-	private:		
+	class AbstractMG : public AbstractComponent
+	{
+	private:
 	protected:
 		const pros::MotorGroup mg;
+
 	public:
-		struct Speeds {
+		struct Speeds
+		{
 			int fwd = 10000;
 			int back = -10000;
 		};
@@ -310,7 +367,8 @@ namespace hyper {
 		/// @brief Args for abstract motor group object
 		/// @param abstractComponentArgs Args for AbstractComponent object
 		/// @param ports Vector of ports for motor group
-		struct AbstractMGArgs {
+		struct AbstractMGArgs
+		{
 			AbstractComponentArgs abstractComponentArgs;
 			MGPorts ports;
 		};
@@ -320,29 +378,37 @@ namespace hyper {
 
 		/// @brief Constructor for abstract motor group object
 		/// @param args Args for abstract motor group object (check args struct for more info)
-		AbstractMG(AbstractMGArgs args) : 
-			AbstractComponent(args.abstractComponentArgs),
-			mg(args.ports) {};
+		AbstractMG(AbstractMGArgs args) : AbstractComponent(args.abstractComponentArgs),
+										  mg(args.ports) {};
 
 		/// @brief Move the motors in the specified direction according to speeds.
 		/// @param on Whether to stop or start the motors.
 		/// @param directionForward Direction to go.
-		void move(bool on, bool directionForward = true) {
+		void move(bool on, bool directionForward = true)
+		{
 			on = canMove(on);
 
-			if (on) {
-				if (directionForward) {
+			if (on)
+			{
+				if (directionForward)
+				{
 					mg.move_velocity(speeds.fwd);
-					if (outputSpeeds) {
-						//pros::lcd::print(2, "motor going!!");
-					}
-				} else {
-					mg.move_velocity(speeds.back);
-					if (outputSpeeds) {
-						//pros::lcd::print(2, "motor not going :(");
+					if (outputSpeeds)
+					{
+						// pros::lcd::print(2, "motor going!!");
 					}
 				}
-			} else {
+				else
+				{
+					mg.move_velocity(speeds.back);
+					if (outputSpeeds)
+					{
+						// pros::lcd::print(2, "motor not going :(");
+					}
+				}
+			}
+			else
+			{
 				mg.move_velocity(0);
 			}
 		}
@@ -353,21 +419,29 @@ namespace hyper {
 	}; // class AbstractMG
 
 	/// @brief Class which manages button presses (will run function on up, down and hold states of given button)
-	class BtnManager : public AbstractComponent {
+	class BtnManager : public AbstractComponent
+	{
 	private:
 		bool lastPressed = false;
 
-		void handleBtnPressed() {
-			if (lastPressed) {
-				for (VoidFunc& func: actionInfo.holdFuncs) {
+		void handleBtnPressed()
+		{
+			if (lastPressed)
+			{
+				for (VoidFunc &func : actionInfo.holdFuncs)
+				{
 					func();
 				}
-			} else {
-				for (VoidFunc& func: actionInfo.downFuncs) {
+			}
+			else
+			{
+				for (VoidFunc &func : actionInfo.downFuncs)
+				{
 					func();
 				}
 			}
 		}
+
 	protected:
 	public:
 		/// @brief Struct for action info for button manager object
@@ -375,7 +449,8 @@ namespace hyper {
 		/// @param downFuncs Functions that are run once when down state is reached
 		/// @param holdFuncs Functions to continuously run on hold state
 		/// @param btn Button to manage
-		struct ActionInfo {
+		struct ActionInfo
+		{
 			pros::controller_digital_e_t btn;
 			VoidFuncVector downFuncs = {};
 			VoidFuncVector upFuncs = {};
@@ -387,28 +462,33 @@ namespace hyper {
 		/// @brief Args for button manager object
 		/// @param abstractComponentArgs Args for AbstractComponent object
 		/// @param actionInfo Action info for button manager object
-		struct BtnManagerArgs {
+		struct BtnManagerArgs
+		{
 			AbstractComponentArgs abstractComponentArgs;
 			ActionInfo actionInfo;
 		};
 
 		/// @brief Creates button manager object
 		/// @param args Args for button manager object (check args struct for more info)
-		BtnManager(BtnManagerArgs args) : 
-			AbstractComponent(args.abstractComponentArgs),
-			actionInfo(args.actionInfo) {};
+		BtnManager(BtnManagerArgs args) : AbstractComponent(args.abstractComponentArgs),
+										  actionInfo(args.actionInfo) {};
 
-		void opControl() override {
+		void opControl() override
+		{
 			bool btnPressed = master->get_digital(actionInfo.btn);
-			
+
 			// down: !lastPressed && btnPressed
 			// up: lastPressed && !btnPressed
 			// hold: lastPressed && btnPressed
 
-			if (btnPressed) {
+			if (btnPressed)
+			{
 				handleBtnPressed();
-			} else if (lastPressed) {
-				for (VoidFunc& func: actionInfo.upFuncs) {
+			}
+			else if (lastPressed)
+			{
+				for (VoidFunc &func : actionInfo.upFuncs)
+				{
 					func();
 				}
 			}
@@ -416,70 +496,87 @@ namespace hyper {
 			lastPressed = btnPressed;
 		}
 
-		bool getLastPressed() {
+		bool getLastPressed()
+		{
 			return lastPressed;
 		}
 	};
 
 	/// @brief Class for a toggle on the controller
-	class BiToggle : public AbstractComponent {
+	class BiToggle : public AbstractComponent
+	{
 	public:
-		enum class State {
+		enum class State
+		{
 			OFF,
 			FWD,
 			BACK
 		};
+
 	private:
-		AbstractMG* component;
-		
+		AbstractMG *component;
+
 		State state = State::OFF;
 		bool isNewPress = true;
 
-		void moveState(State target) {
-			if (!isNewPress) {
+		void moveState(State target)
+		{
+			if (!isNewPress)
+			{
 				return;
 			}
 
-			switch (target) {
-				case State::OFF:
-					component->move(false);
-					break;
-				case State::FWD:
-					component->move(true);
-					break;
-				case State::BACK:
-					component->move(true, false);
-					break;
+			switch (target)
+			{
+			case State::OFF:
+				component->move(false);
+				break;
+			case State::FWD:
+				component->move(true);
+				break;
+			case State::BACK:
+				component->move(true, false);
+				break;
 			}
-			
+
 			state = target;
 		}
 
-		void handleFwdBtn() {
-			if (state == State::FWD) {
+		void handleFwdBtn()
+		{
+			if (state == State::FWD)
+			{
 				moveState(State::OFF);
 				pros::lcd::print(1, "Fwd pressed AND GOING OFF");
-			} else {
+			}
+			else
+			{
 				moveState(State::FWD);
 				pros::lcd::print(1, "Fwd pressed AND GOING FWD");
 			}
 		}
 
-		void handleBackBtn() {
-			if (state == State::BACK) {
+		void handleBackBtn()
+		{
+			if (state == State::BACK)
+			{
 				moveState(State::OFF);
 				pros::lcd::print(1, "Back pressed AND GOING OFF");
-			} else {
+			}
+			else
+			{
 				moveState(State::BACK);
 				pros::lcd::print(1, "Back pressed AND GOING BACK");
 			}
 		}
+
 	protected:
 	public:
 		/// @brief Struct for buttons for BiToggle object
 		/// @param fwd Button for forward
 		/// @param back Button for backward
-		struct Buttons {
+		struct Buttons
+		{
 			pros::controller_digital_e_t fwd;
 			pros::controller_digital_e_t back;
 		};
@@ -488,9 +585,10 @@ namespace hyper {
 		/// @param abstractComponentArgs Args for AbstractComponent object
 		/// @param component Component to toggle
 		/// @param btns Buttons for toggle
-		struct BiToggleArgs {
+		struct BiToggleArgs
+		{
 			AbstractComponentArgs abstractComponentArgs;
-			AbstractMG* component;
+			AbstractMG *component;
 			Buttons btns;
 		};
 
@@ -498,32 +596,35 @@ namespace hyper {
 
 		/// @brief Creates BiToggle object
 		/// @param args Args for BiToggle object (check args struct for more info)
-		BiToggle(BiToggleArgs args) : 
-			AbstractComponent(args.abstractComponentArgs),
-			component(args.component),
-			btns(args.btns) {};
+		BiToggle(BiToggleArgs args) : AbstractComponent(args.abstractComponentArgs),
+									  component(args.component),
+									  btns(args.btns) {};
 
-		void opControl() {
+		void opControl()
+		{
 			bool fwdPressed = master->get_digital(btns.fwd);
 			bool backPressed = master->get_digital(btns.back);
 
 			pros::lcd::print(3, ("FWD: " + std::to_string(fwdPressed)).c_str());
 			pros::lcd::print(4, ("BACK: " + std::to_string(backPressed)).c_str());
 
-			if (fwdPressed && backPressed) {
+			if (fwdPressed && backPressed)
+			{
 				// Don't do anything if both are pressed
 				// TODO: test whether the return works
 				// because we need it for backwards motor movement
 				return;
 			}
 
-			if (fwdPressed) {
+			if (fwdPressed)
+			{
 				handleFwdBtn();
 				isNewPress = false;
 				return;
 			}
 
-			if (backPressed) {
+			if (backPressed)
+			{
 				handleBackBtn();
 				isNewPress = false;
 				return;
@@ -532,121 +633,139 @@ namespace hyper {
 			isNewPress = true;
 		}
 
-		void setState(State target) {
+		void setState(State target)
+		{
 			state = target;
 		}
 
-		State getState() {
+		State getState()
+		{
 			return state;
 		}
 	}; // class BiToggle
 
 	/// @brief Advanced task scheduling class with thread-safe timing capabilities
-	class Timer : public AbstractComponent {
-		private:
-			// Time passed in milliseconds
-			std::uint32_t ms = 0;
-			int tickMs = 20;
-		protected:
-		public:
-			// Assuming 1 tick is at least 1 milliseconds, this is at least 24 hours worth of runs
-			static constexpr int INFINITE_RUNS = 86400000;
-			static constexpr int NO_RUNS = 0;
+	class Timer : public AbstractComponent
+	{
+	private:
+		// Time passed in milliseconds
+		std::uint32_t ms = 0;
+		int tickMs = 20;
 
-			/// @brief Basic structure for a scheduled task
-			/// @param func Function to run
-			/// @param ms Time to wait for in milliseconds
-			/// @param runs Number of times to run the function (use INFINITE_RUNS for infinite)
-			struct Timeout {
-				std::function<void(Timeout& timeout)> func;
-				int ms;
-				int runs = 1;
-			};
-		private:
-			/// @brief Internal structure for a scheduled task
-			/// @param timeout Timeout object
-			/// @param nextRun Next ms time to run timeout
-			struct InternalTimeout {
-				Timeout timeout;
-				std::uint32_t nextRun;
-			};
+	protected:
+	public:
+		// Assuming 1 tick is at least 1 milliseconds, this is at least 24 hours worth of runs
+		static constexpr int INFINITE_RUNS = 86400000;
+		static constexpr int NO_RUNS = 0;
 
-			vector<InternalTimeout> timeouts = {};
+		/// @brief Basic structure for a scheduled task
+		/// @param func Function to run
+		/// @param ms Time to wait for in milliseconds
+		/// @param runs Number of times to run the function (use INFINITE_RUNS for infinite)
+		struct Timeout
+		{
+			std::function<void(Timeout &timeout)> func;
+			int ms;
+			int runs = 1;
+		};
 
-			void removeExpiredTimeouts() {
-				timeouts.erase(
-					std::remove_if(timeouts.begin(), timeouts.end(),
-						[](const InternalTimeout& ito) {
-							return ito.timeout.runs <= NO_RUNS;
-						}
-					),
-					timeouts.end()
-				);
-			}
+	private:
+		/// @brief Internal structure for a scheduled task
+		/// @param timeout Timeout object
+		/// @param nextRun Next ms time to run timeout
+		struct InternalTimeout
+		{
+			Timeout timeout;
+			std::uint32_t nextRun;
+		};
 
-			void processTimeouts() {
-				removeExpiredTimeouts();
+		vector<InternalTimeout> timeouts = {};
 
-				for (InternalTimeout& ito : timeouts) {
-					ito.timeout.runs--;
+		void removeExpiredTimeouts()
+		{
+			timeouts.erase(
+				std::remove_if(timeouts.begin(), timeouts.end(),
+							   [](const InternalTimeout &ito)
+							   {
+								   return ito.timeout.runs <= NO_RUNS;
+							   }),
+				timeouts.end());
+		}
 
-					if (ito.nextRun <= ms) {
-						ito.timeout.func(ito.timeout);
-					}
-					
-					ito.nextRun += ito.timeout.ms;
+		void processTimeouts()
+		{
+			removeExpiredTimeouts();
+
+			for (InternalTimeout &ito : timeouts)
+			{
+				ito.timeout.runs--;
+
+				if (ito.nextRun <= ms)
+				{
+					ito.timeout.func(ito.timeout);
 				}
-			}
-		public:
-			/// @brief Args for timer object
-			/// @param abstractComponentArgs Args for AbstractComponent object
-			struct TimerArgs {
-				AbstractComponentArgs abstractComponentArgs;
-			};
 
-			using ArgsType = TimerArgs;
-
-			/// @brief Constructor for timer object
-			/// @param args Args for timer object (see args struct for more info)
-			Timer(TimerArgs args) : 
-				AbstractComponent(args.abstractComponentArgs) {};
-			
-			/// @brief Sleep function to be used instead of pros::delay to track time for task scheduling
-			/// @param time Time in milliseconds to wait for
-			void sleep(int time) {
-				pros::delay(time);
-				ms += time;
+				ito.nextRun += ito.timeout.ms;
 			}
+		}
 
-			/// @brief Gets the tick wait time in milliseconds
-			/// @return Time to wait for in milliseconds
-			int getTickMs() {
-				return tickMs;
-			}
+	public:
+		/// @brief Args for timer object
+		/// @param abstractComponentArgs Args for AbstractComponent object
+		struct TimerArgs
+		{
+			AbstractComponentArgs abstractComponentArgs;
+		};
 
-			/// @brief Gets the current time in milliseconds
-			/// @return Current time in milliseconds
-			std::uint32_t getTimeMs() {
-				return ms;
-			}
+		using ArgsType = TimerArgs;
 
-			/// @brief Setup a new timeout
-			/// @param timeout Timeout object to setup
-			void setupTimeout(Timeout timeout) {
-				std::uint32_t nextRun = ms + timeout.ms;
-				InternalTimeout ito = {timeout, nextRun};
-				timeouts.push_back(ito);
-			}
+		/// @brief Constructor for timer object
+		/// @param args Args for timer object (see args struct for more info)
+		Timer(TimerArgs args) : AbstractComponent(args.abstractComponentArgs) {};
 
-			void opControl() override {
-				sleep(tickMs);
-				processTimeouts();
-			}
+		/// @brief Sleep function to be used instead of pros::delay to track time for task scheduling
+		/// @param time Time in milliseconds to wait for
+		void sleep(int time)
+		{
+			pros::delay(time);
+			ms += time;
+		}
+
+		/// @brief Gets the tick wait time in milliseconds
+		/// @return Time to wait for in milliseconds
+		int getTickMs()
+		{
+			return tickMs;
+		}
+
+		/// @brief Gets the current time in milliseconds
+		/// @return Current time in milliseconds
+		std::uint32_t getTimeMs()
+		{
+			return ms;
+		}
+
+		/// @brief Setup a new timeout
+		/// @param timeout Timeout object to setup
+		void setupTimeout(Timeout timeout)
+		{
+			std::uint32_t nextRun = ms + timeout.ms;
+			InternalTimeout ito = {timeout, nextRun};
+			timeouts.push_back(ito);
+		}
+
+		void opControl() override
+		{
+			sleep(tickMs);
+			processTimeouts();
+		}
 	}; // class Timer
 
-	namespace Drivetrain {
+	namespace Drivetrain
+	{
 		/// @brief Struct for drivetrain IO
-		struct DriveIO {
+		struct DriveIO
+		{
 			// Drivetrain motor groups lef/right
 			pros::MotorGroup left;
 			pros::MotorGroup right;
@@ -661,7 +780,8 @@ namespace hyper {
 			/// @brief Struct for drive ports
 			/// @param leftPorts Ports for left motor group
 			/// @param rightPorts Ports for right motor group
-			struct DrivePorts {
+			struct DrivePorts
+			{
 				MGPorts leftPorts;
 				MGPorts rightPorts;
 				int8_t imuPort;
@@ -670,18 +790,21 @@ namespace hyper {
 			};
 
 			/// @brief Tare the motor groups
-			void tare() {
+			void tare()
+			{
 				left.tare_position();
 				right.tare_position();
 			}
 
-			void resetEncoders() {
+			void resetEncoders()
+			{
 				// Reset encoders
 				tRot.reset();
 				lRot.reset();
 			}
 
-			void calibrateAll(bool blocking = true) {
+			void calibrateAll(bool blocking = true)
+			{
 				// Calibrate/tare IMU
 				imu.reset(blocking);
 				imu.tare();
@@ -692,135 +815,173 @@ namespace hyper {
 			/// @brief Constructor for DriveMGs object
 			/// @param leftPorts Ports for left motor group
 			/// @param rightPorts Ports for right motor group
-			DriveIO(DrivePorts drivePorts) : 
-				left(drivePorts.leftPorts), right(drivePorts.rightPorts),
-				imu(drivePorts.imuPort),
-				lRot(drivePorts.lRotPort), tRot(drivePorts.tRotPort) {
-					calibrateAll();
-				};
+			DriveIO(DrivePorts drivePorts) : left(drivePorts.leftPorts), right(drivePorts.rightPorts),
+											 imu(drivePorts.imuPort),
+											 lRot(drivePorts.lRotPort), tRot(drivePorts.tRotPort)
+			{
+				calibrateAll();
+			};
 
 			/// @brief Set the voltage of the motor groups
 			/// @param leftVoltage Voltage to set the left motor group to
 			/// @param rightVoltage Voltage to set the right motor group to
-			void voltage(int leftVoltage, int rightVoltage) {
+			void voltage(int leftVoltage, int rightVoltage)
+			{
 				left.move_voltage(leftVoltage);
 				right.move_voltage(rightVoltage);
 			}
 
+			/// @brief Set the same voltage to both motor groups
+			/// @param volt Voltage to set both motor groups to
+			void voltage(int volt)
+			{
+				voltage(volt, volt);
+			}
+
 			/// @brief Stop the motor groups by setting their voltage to 0
-			void stop() {
+			void stop()
+			{
 				voltage(0, 0);
 			}
 
 			/// @brief Set the velocity of the motor groups
 			/// @param leftVel Velocity to set the left motor group to
 			/// @param rightVel Velocity to set the right motor group to
-			void velocity(int leftVel, int rightVel) {
+			void velocity(int leftVel, int rightVel)
+			{
 				left.move_velocity(leftVel);
 				right.move_velocity(rightVel);
+			}
+
+			/// @brief Set the same velocity to both motor groups
+			void velocity(int vel)
+			{
+				velocity(vel, vel);
 			}
 
 			/// @brief Move the motor groups using the motor.move() function
 			/// @param leftSpeed Speed to move the left motor group at
 			/// @param rightSpeed Speed to move the right motor group at
-			void move(int leftSpeed, int rightSpeed) {
+			void move(int leftSpeed, int rightSpeed)
+			{
 				left.move(leftSpeed);
 				right.move(rightSpeed);
 			}
 
+			/// @brief Move both motor groups at the same speed
+			/// @param speed Speed to move motor groups at
+			void move(int speed)
+			{
+				move(speed, speed);
+			}
+
 			/// @brief Get the average position of the motor groups (certain wires on our motor are broken so you MUST use this if you want a reliable position)
 			/// @return Average position of the motor groups
-			double positionMG() {
+			double positionMG()
+			{
 				return (left.get_position() + right.get_position()) / 2;
 			}
 
 			/// @brief Get the average velocity of the motor groups (certain wires on our motor are broken so you MUST use this if you want a reliable velocity)
 			/// @param blocking Whether to block IMU during calibration
-			void calibrateIMU(bool blocking = true) {
+			void calibrateIMU(bool blocking = true)
+			{
 				imu.reset(blocking);
 				imu.tare();
 			}
 		};
 
 		/// @brief Class to control autonomous routines for driving
-		class DrivePID {
+		class DrivePID
+		{
 		public:
 		private:
-			DriveIO* dio;
+			DriveIO *dio;
 
 			int delayMs = 20;
+
 		protected:
-			public:
-			struct KValues {
+		public:
+			struct KValues
+			{
 				float kP;
 				float kI;
 				float kD;
 				float threshold;
 			};
-			
+
 			static inline const KValues kTurn = {
-				0.3, 0.0, 0.7, 1.0
-			};
+				0.3, 0.0, 0.7, 1.0};
 
 			static inline const KValues kMove = {
-				1.0, 0.0, 0.4, 3.0
-			};
+				1.0, 0.0, 0.4, 3.0};
 
-			struct InchesPerTick {
+			struct InchesPerTick
+			{
 				static constexpr float L_ROT_DIV_THEORETICAL = 0.0001096386338;
 				static constexpr float L_ROT_MUL_THEORETICAL = 9120.872500328438;
 				static constexpr float L_ROT_MUL_PRACTICAL = 5753.54167;
 			};
 
-
-
 			/// @brief Manages checkpoint triggering during lateral PID movements
-			struct CheckpointManager {
+			struct CheckpointManager
+			{
 			public:
 				/// @brief Checkpoint structure for triggering functions at specific distances during lateral movement
 				/// @param distanceInches Distance in inches (from start position) at which to trigger the action
 				/// @param action Function to execute when checkpoint is reached
-				struct Checkpoint {
+				struct Checkpoint
+				{
 					float distanceInches;
 					VoidFunc action;
 				};
 
 				using Checkpoints = vector<Checkpoint>;
+
 			private:
 				vector<float> checkpointDistancesTicks;
 				vector<bool> available;
-				const Checkpoints& checkpoints;
+				const Checkpoints &checkpoints;
 				bool movingForward;
+
 			protected:
 			public:
 				/// @brief Initializes checkpoint manager with converted distances
 				/// @param checkpoints Reference to checkpoint vector
 				/// @param direction True if moving forward, false if moving backward
-				CheckpointManager(const Checkpoints& checkpoints, bool direction) : 
-					checkpoints(checkpoints),
-					movingForward(direction),
-					available(checkpoints.size(), true) {
-					
+				CheckpointManager(const Checkpoints &checkpoints, bool direction) : checkpoints(checkpoints),
+																					movingForward(direction),
+																					available(checkpoints.size(), true)
+				{
+
 					// Convert all checkpoint distances from inches to encoder ticks
 					checkpointDistancesTicks.reserve(checkpoints.size());
-					for (const Checkpoint& checkpoint : checkpoints) {
+					for (const Checkpoint &checkpoint : checkpoints)
+					{
 						checkpointDistancesTicks.push_back(checkpoint.distanceInches * InchesPerTick::L_ROT_MUL_PRACTICAL);
 					}
 				}
 
 				/// @brief Checks and triggers any checkpoints that have been reached
 				/// @param currentPositionTicks Current position in encoder ticks
-				void check(float currentPositionTicks) {
-					for (size_t i = 0; i < checkpoints.size(); i++) {
-						if (available[i]) {
+				void check(float currentPositionTicks)
+				{
+					for (size_t i = 0; i < checkpoints.size(); i++)
+					{
+						if (available[i])
+						{
 							bool shouldTrigger = false;
-							if (movingForward) {
+							if (movingForward)
+							{
 								shouldTrigger = currentPositionTicks >= checkpointDistancesTicks[i];
-							} else {
+							}
+							else
+							{
 								shouldTrigger = currentPositionTicks <= checkpointDistancesTicks[i];
 							}
 
-							if (shouldTrigger) {
+							if (shouldTrigger)
+							{
 								checkpoints[i].action();
 								available[i] = false;
 							}
@@ -829,14 +990,26 @@ namespace hyper {
 				}
 			}; // struct CheckpointManager
 
-			struct DrivePIDArgs {
-				DriveIO* dio;
+			struct DrivePIDArgs
+			{
+				DriveIO *dio;
 			};
 
-			DrivePID(DrivePIDArgs args) : 
-				dio(args.dio) {};
+			DrivePID(DrivePIDArgs args) : dio(args.dio) {};
 
 			// TODO: Implement PID functions (and copy over legacy code)
+
+			/// @brief Basic information for any PID maneuver
+			/// @param pos Target position
+			/// @param reductionFactor Reduction factor for output (higher is slower)
+			/// @param timeLimit Time limit for maneuver in milliseconds
+			struct Maneuver
+			{
+				double pos;
+				float reductionFactor;
+				float timeLimit;
+			};
+			// TODO: Change PID funcs to use this new struct
 
 			/// @brief Move to a specific position using PID
 			/// @param pos Position to move to in inches (use negative for backward)
@@ -845,9 +1018,16 @@ namespace hyper {
 			/// @param kv PID tuning values
 			/// @param checkpoints Vector of checkpoints to trigger functions at specific distances
 			// TODO: Tuning required
-			void lateral(double pos, float reductionFactor = 2, float timeLimit = 5000, const CheckpointManager::Checkpoints& checkpoints = {}, const KValues& kv = DrivePID::kMove) {
-				if (std::fabs(pos) <= 0.01) { return; }
-				
+			void lateral(
+				double pos, float reductionFactor = 2, float timeLimit = 5000,
+				const CheckpointManager::Checkpoints &checkpoints = {},
+				const KValues &kv = DrivePID::kMove)
+			{
+				if (std::fabs(pos) <= 0.01)
+				{
+					return;
+				}
+
 				dio->tare();
 				dio->resetEncoders();
 
@@ -874,7 +1054,8 @@ namespace hyper {
 
 				// with moving you just wanna move both MGs at the same speed
 
-				while (true) {
+				while (true)
+				{
 					// Get current position
 					motorPos = -dio->lRot.get_position();
 					error = pos - motorPos;
@@ -885,7 +1066,8 @@ namespace hyper {
 					// PID calculations
 					integral += error;
 					// Anti windup
-					if (std::fabs(error) < kv.threshold) {
+					if (std::fabs(error) < kv.threshold)
+					{
 						integral = 0;
 					}
 
@@ -900,16 +1082,19 @@ namespace hyper {
 					dio->voltage(out, out);
 
 					curOutPositive = out > 0;
-					if (lastOutPositive != curOutPositive) {
+					if (lastOutPositive != curOutPositive)
+					{
 						outCycles++;
 					}
 
-					if (outCycles > 3) {
+					if (outCycles > 3)
+					{
 						pros::lcd::print(4, "PIDMove Out oscillating STOP");
 						break;
 					}
 
-					if (std::fabs(error) <= kv.threshold) {
+					if (std::fabs(error) <= kv.threshold)
+					{
 						break;
 					}
 
@@ -917,7 +1102,8 @@ namespace hyper {
 					pros::lcd::print(5, ("PIDMove Out: " + std::to_string(out)).c_str());
 					pros::lcd::print(7, ("PIDMove Error: " + std::to_string(error)).c_str());
 
-					if (cycles >= maxCycles) {
+					if (cycles >= maxCycles)
+					{
 						pros::lcd::print(4, "PIDMove Time limit reached");
 						break;
 					}
@@ -934,10 +1120,14 @@ namespace hyper {
 			/// @param reductionFactor Factor to reduce the output by (higher value means lower speed)
 			/// @param timeLimit Time limit for the turn in milliseconds
 			/// @param kv PID tuning values
-			void turn(double angle, float reductionFactor = 2, float timeLimit = 5000, const KValues& kv = DrivePID::kTurn) {
+			void turn(double angle, float reductionFactor = 2, float timeLimit = 5000, const KValues &kv = DrivePID::kTurn)
+			{
 				float absAngle = std::fabs(angle);
 
-				if (absAngle <= 0.01) { return; }
+				if (absAngle <= 0.01)
+				{
+					return;
+				}
 
 				dio->imu.tare();
 				angle = naiveNormaliseAngle(angle);
@@ -959,7 +1149,8 @@ namespace hyper {
 				float maxCycles = timeLimit / delayMs;
 				float cycles = 0;
 
-				if (std::fabs(absAngle) >= 180) {
+				if (std::fabs(absAngle) >= 180)
+				{
 					turn180 = true;
 				}
 
@@ -968,13 +1159,15 @@ namespace hyper {
 				// with turning you just wanna move the other MG at negative of the MG of the direction
 				// which u wanna turn to
 
-				while (true) {
+				while (true)
+				{
 					trueHeading = std::fmod((dio->imu.get_heading() + 180), 360) - 180;
 					error = angle - trueHeading;
 
 					integral += error;
 					// Anti windup
-					if (std::fabs(error) < kv.threshold) {
+					if (std::fabs(error) < kv.threshold)
+					{
 						integral = 0;
 					}
 
@@ -992,20 +1185,24 @@ namespace hyper {
 					pros::lcd::print(7, ("PIDTurn Error: " + std::to_string(error)).c_str());
 					pros::lcd::print(6, ("PIDTurn True Heading: " + std::to_string(dio->imu.get_heading())).c_str());
 
-					if (std::fabs(error) <= kv.threshold) {
+					if (std::fabs(error) <= kv.threshold)
+					{
 						break;
 					}
 
 					// 180 degree turning
-					if (std::fabs(trueHeading) >= maxThreshold) {
+					if (std::fabs(trueHeading) >= maxThreshold)
+					{
 						break;
 					}
 
-					if (std::fabs(out) < 100) {
+					if (std::fabs(out) < 100)
+					{
 						pros::lcd::print(4, "PIDTurn Out too low");
 					}
 
-					if (cycles >= maxCycles) {
+					if (cycles >= maxCycles)
+					{
 						pros::lcd::print(4, "PIDTurn Time limit reached");
 						break;
 					}
@@ -1019,22 +1216,26 @@ namespace hyper {
 			}
 
 			/// @brief 180 deg turning - turn(180) can be buggy, this is ALWAYS the latest practical solution to achieve this.
-			void uTurn() {
+			void uTurn()
+			{
 				turn(90);
 				turn(90);
 			}
 
 			// New unified PID movement function (under development)
-			void move(float rotation, float position, float reductionFactor = 2) {
+			void move(float rotation, float position, float reductionFactor = 2)
+			{
 				turn(rotation, reductionFactor);
 				lateral(position, reductionFactor);
 			}
 		}; // class DrivePID
 
 		/// @brief Class to manage drivetrain operator control
-		class DriveControl : public AbstractComponent {
+		class DriveControl : public AbstractComponent
+		{
 		public:
-			enum class DriveControlMode {
+			enum class DriveControlMode
+			{
 				ARCADE,
 				TANK,
 				ATAC
@@ -1044,13 +1245,14 @@ namespace hyper {
 
 			DriveControlMode driveControlMode;
 
-			DriveIO* dio;
+			DriveIO *dio;
 
 			/// @brief Args for DriveControl object
 			/// @param abstractComponentArgs Args for AbstractComponent object
-			struct DriveControlArgs {
+			struct DriveControlArgs
+			{
 				AbstractComponentArgs abstractComponentArgs;
-				DriveIO* dio;
+				DriveIO *dio;
 			};
 
 			/// @brief Struct for different driver control speeds on arcade control
@@ -1058,10 +1260,12 @@ namespace hyper {
 			/// @param forwardBackSpeed Multiplier for only forward/backward
 			/// @param arcSpeed Multiplier of opposite turn for when turning and moving laterally at the same time
 			// (higher value means less lateral movement)
-			struct ArcadeControlSpeed {
+			struct ArcadeControlSpeed
+			{
 			private:
 				float forwardBackSpeed;
 				float maxLateral;
+
 			public:
 				static constexpr float controllerMax = 127;
 
@@ -1071,29 +1275,32 @@ namespace hyper {
 				/// @brief Sets the forward/backward speed
 				/// @param speed Speed to set the forward/backward speed to
 				// (Also prepares maxLateral for arc movement)
-				void setForwardBackSpeed(float speed, float maxTolerance = 1) {
+				void setForwardBackSpeed(float speed, float maxTolerance = 1)
+				{
 					forwardBackSpeed = speed;
 					maxLateral = speed * controllerMax + maxTolerance;
 				}
 
 				/// @brief Gets the forward/backward speed
 				/// @return Forward/backward speed
-				float getForwardBackSpeed() {
+				float getForwardBackSpeed()
+				{
 					return forwardBackSpeed;
 				}
 
 				/// @brief Gets the max lateral movement
 				/// @return Max lateral movement
-				float getMaxLateral() {
+				float getMaxLateral()
+				{
 					return maxLateral;
 				}
 
 				// lower arc speed is lower turning
 
-				ArcadeControlSpeed(float turnSpeed = 1, float forwardBackSpeed = 1, float arcSpeed = 0.7) :
-					turnSpeed(turnSpeed), 
-					arcSpeed(arcSpeed) {
-						setForwardBackSpeed(forwardBackSpeed);
+				ArcadeControlSpeed(float turnSpeed = 1, float forwardBackSpeed = 1, float arcSpeed = 0.7) : turnSpeed(turnSpeed),
+																											arcSpeed(arcSpeed)
+				{
+					setForwardBackSpeed(forwardBackSpeed);
 				}
 			};
 
@@ -1103,7 +1310,8 @@ namespace hyper {
 			/// @param base Base speed for the side
 			/// @param deadband Absolute deadband for the side
 			/// @param sigmoid Sigmoid for the side
-			struct TankSpeed {
+			struct TankSpeed
+			{
 				float base = 1.0;
 				float deadband = 0.0;
 				Vertical sigmoid = {1.0, 1.0};
@@ -1111,25 +1319,31 @@ namespace hyper {
 
 			// Tank speeds for left and right sides
 			TankSpeed tankSpeeds[2] = {{}, {}};
+
 		private:
 			// Coefficients for turning in driver control
-			struct TurnCoefficients {
+			struct TurnCoefficients
+			{
 				float left;
 				float right;
 			};
 
-			void bindDriveControl(Horizontal (DriveControl::*driveFunc)()) {
+			void bindDriveControl(Horizontal (DriveControl::*driveFunc)())
+			{
 				driveControl = std::bind(driveFunc, this);
 			}
 
-			void prepareArcadeLateral(float& lateral) {
+			void prepareArcadeLateral(float &lateral)
+			{
 				// Change to negative to invert
 				lateral *= 1;
 			}
 
 			// Calculate the movement of the robot when turning and moving laterally at the same time
-			void calculateArcMovement(TurnCoefficients& turnCoeffs, float lateral, float turn, float maxLateralTolerance = 1, float arcDeadband = 30) {
-				if (std::fabs(lateral) < arcDeadband) {
+			void calculateArcMovement(TurnCoefficients &turnCoeffs, float lateral, float turn, float maxLateralTolerance = 1, float arcDeadband = 30)
+			{
+				if (std::fabs(lateral) < arcDeadband)
+				{
 					return;
 				}
 
@@ -1140,20 +1354,25 @@ namespace hyper {
 
 				float turnDecrease = 1 * turn * lateralCompensation * dynamicArcSpeed;
 
-				if (lateral > 0) {
+				if (lateral > 0)
+				{
 					turnDecrease *= turn * 0.0001;
 				}
 
-				if (turn > 0) { // Turning to right so we decrease the left MG
+				if (turn > 0)
+				{ // Turning to right so we decrease the left MG
 					turnCoeffs.left += (lateral < 0) ? -turnDecrease : turnDecrease;
-				} else { // Turning to left so we decrease the right MG
+				}
+				else
+				{ // Turning to left so we decrease the right MG
 					turnCoeffs.right += (lateral > 0) ? -turnDecrease : turnDecrease;
 				}
 
 				pros::lcd::print(6, ("TD, dAS:, lComp: " + std::to_string(turnDecrease) + ", " + std::to_string(dynamicArcSpeed) + ", " + std::to_string(lateralCompensation)).c_str());
 			}
 
-			TurnCoefficients calculateArcadeTurns(float turn, float lateral) {
+			TurnCoefficients calculateArcadeTurns(float turn, float lateral)
+			{
 				turn *= 1;
 
 				TurnCoefficients turnCoeffs = {turn, turn};
@@ -1164,14 +1383,15 @@ namespace hyper {
 				return turnCoeffs;
 			}
 
-			Horizontal arcadeControl() {
-				float lateral = master->get_analog(ANALOG_LEFT_Y);    // Gets amount forward/backward from left joystick
-				float turn = master->get_analog(ANALOG_RIGHT_X);  // Gets the turn left/right from right joystick
+			Horizontal arcadeControl()
+			{
+				float lateral = master->get_analog(ANALOG_LEFT_Y); // Gets amount forward/backward from left joystick
+				float turn = master->get_analog(ANALOG_RIGHT_X);   // Gets the turn left/right from right joystick
 
 				prepareArcadeLateral(lateral);
 
 				TurnCoefficients turnCoeffs = calculateArcadeTurns(turn, lateral);
-				
+
 				pros::lcd::print(1, ("T, L:" + std::to_string(turn) + ", " + std::to_string(lateral)).c_str());
 
 				// Calculate speeds
@@ -1191,26 +1411,33 @@ namespace hyper {
 			}
 
 			// Basic tank control
-			Horizontal tankControl() {
+			Horizontal tankControl()
+			{
 				float left = master->get_analog(ANALOG_LEFT_Y) * tankSpeeds[0].base;
 				float right = master->get_analog(ANALOG_RIGHT_Y) * tankSpeeds[1].base;
 
 				return {left, right};
 			}
 
-			float atacSigmoid(float absSpeed, const Vertical& sigmoid) {
-				if (absSpeed < 0.5) {
+			float atacSigmoid(float absSpeed, const Vertical &sigmoid)
+			{
+				if (absSpeed < 0.5)
+				{
 					return 0.5 * std::pow(2 * absSpeed, sigmoid.low);
-				} else {
+				}
+				else
+				{
 					return 1 - 0.5 * std::pow(2 - (2 * absSpeed), sigmoid.high);
 				}
 			}
 
 			// ATAC on individual axis (ran for each axis)
-			float atacAxis(float speed, const TankSpeed& tankSpeed) {
+			float atacAxis(float speed, const TankSpeed &tankSpeed)
+			{
 				float absSpeed = std::fabs(speed);
 				// Process deadbands
-				if (absSpeed < tankSpeed.deadband) {
+				if (absSpeed < tankSpeed.deadband)
+				{
 					return 0;
 				}
 
@@ -1223,15 +1450,16 @@ namespace hyper {
 			}
 
 			// Advanced Tank Action Control: Implementing all features we've ever wanted
-			Horizontal atac() {
+			Horizontal atac()
+			{
 				// Must use static_cast to avoid narrowing conversion warning as we are working with arrays
 				float speeds[2] = {
 					static_cast<float>(master->get_analog(ANALOG_LEFT_Y)),
-					static_cast<float>(master->get_analog(ANALOG_RIGHT_Y))
-				};
-			
+					static_cast<float>(master->get_analog(ANALOG_RIGHT_Y))};
+
 				int index = 0;
-				for (float& speed : speeds) {
+				for (float &speed : speeds)
+				{
 					// Rescale to -1 to 1 value
 					speed /= MotorBounds::MOVE_MAX;
 
@@ -1244,13 +1472,14 @@ namespace hyper {
 					index++;
 				}
 
-				//tell(0, "ROT LAT POS: " + std::to_string());
+				// tell(0, "ROT LAT POS: " + std::to_string());
 
 				return {speeds[0], speeds[1]};
 			}
 
 			// Final fallback driver control to default back to final working mode
-			Horizontal fallbackControl() {
+			Horizontal fallbackControl()
+			{
 				return tankControl();
 			}
 
@@ -1258,33 +1487,36 @@ namespace hyper {
 		public:
 			/// @brief Sets the driver control mode
 			/// @param mode Mode to set the driver control to
-			void setDriveControlMode(DriveControlMode mode = DriveControlMode::ATAC) {
+			void setDriveControlMode(DriveControlMode mode = DriveControlMode::ATAC)
+			{
 				driveControlMode = mode;
 
-				switch (driveControlMode) {
-					case DriveControlMode::ARCADE:
-						bindDriveControl(&DriveControl::arcadeControl);
-						break;
-					case DriveControlMode::TANK:
-						bindDriveControl(&DriveControl::tankControl);
-						break;
-					case DriveControlMode::ATAC:
-						bindDriveControl(&DriveControl::atac);
-					default:
-						bindDriveControl(&DriveControl::fallbackControl);
-						break;
+				switch (driveControlMode)
+				{
+				case DriveControlMode::ARCADE:
+					bindDriveControl(&DriveControl::arcadeControl);
+					break;
+				case DriveControlMode::TANK:
+					bindDriveControl(&DriveControl::tankControl);
+					break;
+				case DriveControlMode::ATAC:
+					bindDriveControl(&DriveControl::atac);
+				default:
+					bindDriveControl(&DriveControl::fallbackControl);
+					break;
 				}
 			}
 
 			/// @brief Creates DriveControl object
 			/// @param args Args for DriveControl object (check args struct for more info)
-			DriveControl(DriveControlArgs args) : 
-				AbstractComponent(args.abstractComponentArgs),
-				dio(args.dio) {
-					setDriveControlMode();
-				};
+			DriveControl(DriveControlArgs args) : AbstractComponent(args.abstractComponentArgs),
+												  dio(args.dio)
+			{
+				setDriveControlMode();
+			};
 
-			void opControl() override {
+			void opControl() override
+			{
 				Horizontal speeds = driveControl();
 
 				speeds.left = prepareMoveSpeed(speeds.left);
@@ -1294,21 +1526,24 @@ namespace hyper {
 			}
 		}; // class DriveControl
 
-		class DriveManager : public AbstractComponent {
+		class DriveManager : public AbstractComponent
+		{
 		private:
 		protected:
 		public:
 			/// @brief Structure for DriveManager options provided by user
 			/// @param drivePorts Ports for drivetrain
 			/// @param imuPort Port for IMU
-			struct DriveManagerUserArgs {
+			struct DriveManagerUserArgs
+			{
 				DriveIO::DrivePorts drivePorts;
 			};
 
 			/// @brief Args for DriveManager object
 			/// @param abstractComponentArgs Args for AbstractComponent object
 			/// @param user Args for DriveManager object provideed by user
-			struct DriveManagerArgs {
+			struct DriveManagerArgs
+			{
 				AbstractComponentArgs abstractComponentArgs;
 				DriveManagerUserArgs user;
 			};
@@ -1319,27 +1554,29 @@ namespace hyper {
 
 			/// @brief Creates DriveManager object
 			/// @param args Args for DriveManager object (check args struct for more info)
-			DriveManager(DriveManagerArgs args) : 
-				AbstractComponent(args.abstractComponentArgs),
-				dio({args.user.drivePorts}),
-				pid({&dio}),
-				control({args.abstractComponentArgs, &dio}) {};
+			DriveManager(DriveManagerArgs args) : AbstractComponent(args.abstractComponentArgs),
+												  dio({args.user.drivePorts}),
+												  pid({&dio}),
+												  control({args.abstractComponentArgs, &dio}) {};
 
-			void opControl() override {
+			void opControl() override
+			{
 				control.opControl();
 			}
 		}; // class DriveManager
 	} // namespace Drivetrain
 
 	/// @brief Class for GPS diagnostic
-	class GPSDiagnostic : public AbstractComponent {
+	class GPSDiagnostic : public AbstractComponent
+	{
 	private:
 	protected:
 	public:
 		/// @brief Args for GPS diagnostic object
 		/// @param abstractComponentArgs Args for AbstractComponent object
 		/// @param gpsPort Port for GPS
-		struct GPSDiagnosticArgs {
+		struct GPSDiagnosticArgs
+		{
 			AbstractComponentArgs abstractComponentArgs;
 			uint8_t gpsPort;
 		};
@@ -1348,55 +1585,63 @@ namespace hyper {
 
 		/// @brief Creates GPS diagnostic object
 		/// @param args Args for GPS diagnostic object (check args struct for more info)
-		GPSDiagnostic(GPSDiagnosticArgs args) : 
-			AbstractComponent(args.abstractComponentArgs),
-			gps(args.gpsPort) {}
+		GPSDiagnostic(GPSDiagnosticArgs args) : AbstractComponent(args.abstractComponentArgs),
+												gps(args.gpsPort) {}
 
-		void opControl() override {
-
+		void opControl() override
+		{
 		}
 	}; // class GPSDiagnostic
 
 	/// @brief Screens and reports state of game elements being held by robot
-	class DynamicScreen : public AbstractComponent {
+	class DynamicScreen : public AbstractComponent
+	{
 	private:
 	protected:
 	public:
-		enum class State {
+		enum class State
+		{
 			DETECTED,
 			UNDETECTED
 		};
+
 	private:
 		State state = State::UNDETECTED;
 
 		pros::Optical sensor;
+
 	public:
 		int proximityThreshold = 45; // Occlusion threshold
 
-		struct SensorPorts {
-			DigiPort optical;	
+		struct SensorPorts
+		{
+			DigiPort optical;
 		};
 
 		/// @brief Args for dynamic screen object
 		/// @param abstractComponentArgs Args for AbstractComponent object
-		struct DynamicScreenArgs {
+		struct DynamicScreenArgs
+		{
 			AbstractComponentArgs abstractComponentArgs;
 			SensorPorts sensorPorts;
 		};
 
 		/// @brief Creates dynamic screen object
 		/// @param args Args for dynamic screen object (check args struct for more info)
-		DynamicScreen(DynamicScreenArgs args) : 
-			AbstractComponent(args.abstractComponentArgs),
-			sensor(args.sensorPorts.optical) {};
+		DynamicScreen(DynamicScreenArgs args) : AbstractComponent(args.abstractComponentArgs),
+												sensor(args.sensorPorts.optical) {};
 
-		void opControl() {
+		void opControl()
+		{
 			// Detect for game element using proximity
 			// TODO: Implement multi-colour sorting
 
-			if (sensor.get_proximity() >= proximityThreshold) {
+			if (sensor.get_proximity() >= proximityThreshold)
+			{
 				state = State::DETECTED;
-			} else {
+			}
+			else
+			{
 				state = State::UNDETECTED;
 			}
 
@@ -1405,22 +1650,25 @@ namespace hyper {
 
 		/// @brief Retrieve state of game elements
 		/// @return State of game elements
-		State getState() {
+		State getState()
+		{
 			return state;
 		}
 
 	}; // class DynamicScreen
 
-	class Disperser : public AbstractComponent {
+	class Disperser : public AbstractComponent
+	{
 	public:
 		// Struct to index motorGroupArray
-		struct MotorID {
+		struct MotorID
+		{
 			const static uint8_t BOTTOM = 0;
 			const static uint8_t MID = 1;
 			const static uint8_t TOP = 2;
 		}; // struct MotorID
 
-		DynamicScreen* dynamicScreen;
+		DynamicScreen *dynamicScreen;
 
 		// How many cycles to DELAY, how many cycles to STOP.
 		int delayCycles = 10;
@@ -1443,95 +1691,114 @@ namespace hyper {
 			mgs[MotorID::BOTTOM].move(-127);
 		}*/
 
-		void handleTopDetected() {
+		void handleTopDetected()
+		{
 			currentCycles++;
 		}
 
-		void handleTopUndetected() {
+		void handleTopUndetected()
+		{
 			currentCycles = 0;
 		}
 
-		void handleTLFallback() {
+		void handleTLFallback()
+		{
 			mgs[MotorID::MID].move(127);
 			mgs[MotorID::BOTTOM].move(-127);
 		}
 
-		void handleTopLower() {
-			if (currentCycles >= resetCycles) {
+		void handleTopLower()
+		{
+			if (currentCycles >= resetCycles)
+			{
 				currentCycles = 0;
 			}
 
-			if (currentCycles <= delayCycles) {
+			if (currentCycles <= delayCycles)
+			{
 				// if not rejecting, spin mid and bot
 				handleTLFallback();
-			} else {
+			}
+			else
+			{
 				// if rejecting, stop mid and bot
 				mgs[MotorID::MID].move(0);
 				mgs[MotorID::BOTTOM].move(0);
 			}
 		}
 
-		void handleDynamicScreen() {
+		void handleDynamicScreen()
+		{
 			DynamicScreen::State state = dynamicScreen->getState();
 
-			switch (state) {
-				case DynamicScreen::State::DETECTED:
-					handleTopDetected();
-					break;
-				case DynamicScreen::State::UNDETECTED:
-					handleTopUndetected();
-					break;
-				default:
-					handleTopUndetected();
-					break;
+			switch (state)
+			{
+			case DynamicScreen::State::DETECTED:
+				handleTopDetected();
+				break;
+			case DynamicScreen::State::UNDETECTED:
+				handleTopUndetected();
+				break;
+			default:
+				handleTopUndetected();
+				break;
 			}
 
 			// DEBUG: print current cycles
 			pros::lcd::print(4, ("Current Cycles: " + std::to_string(currentCycles)).c_str());
 		}
 
-		void handleTopGoal() {
+		void handleTopGoal()
+		{
 			// reverse spin MID and normal spin BOT and reverse spin TOP
 			mgs[MotorID::TOP].move(127);
 
-			handleTopLower();
+			//handleTopLower();
 
-			//handleTLFallback();
+			handleTLFallback();
 		}
 
-		void handleMidGoal() {
+		void handleMidGoal()
+		{
 			// normal spin MID normal spin BOT and TOP
 			mgs[MotorID::MID].move(127);
 			mgs[MotorID::BOTTOM].move(-127);
 			mgs[MotorID::TOP].move(-127);
 		}
 
-		void handleBottomGoal() {
+		void handleBottomGoal()
+		{
 			// reverse spin MID and BOT
 			mgs[MotorID::BOTTOM].move(127);
 			mgs[MotorID::MID].move(127);
 		}
 
-		void handleIntake() {
-			// reverse spin MID and BOT		
+		void handleIntake()
+		{
+			// reverse spin MID and BOT
 			mgs[MotorID::BOTTOM].move(-127);
 			mgs[MotorID::MID].move(-127);
 		}
 
-		void handleSingleMid() {
+		void handleSingleMid()
+		{
 			// JUST normal spin mid
 			mgs[MotorID::MID].move(-127);
 		}
 
-		void handleStop() {
-			for (pros::MotorGroup& mg : mgs) {
+		void handleStop()
+		{
+			for (pros::MotorGroup &mg : mgs)
+			{
 				mg.move(0);
 			}
 		}
+
 	private:
 	protected:
 	public:
-		struct DisperserPorts {
+		struct DisperserPorts
+		{
 			MGPorts bottom;
 			MGPorts mid;
 			MGPorts top;
@@ -1539,70 +1806,86 @@ namespace hyper {
 
 		/// @brief Args for disperser object
 		/// @param abstractComponentArgs Args for AbstractComponent object
-		struct DisperserArgs {
+		struct DisperserArgs
+		{
 			AbstractComponentArgs abstractComponentArgs;
 			DisperserPorts ports;
-			DynamicScreen* dynamicScreen;
+			DynamicScreen *dynamicScreen;
 		};
 
 		/// @brief Creates disperser object
 		/// @param args Args for disperser object (check args struct for more info)
-		Disperser(DisperserArgs args) : 
-			AbstractComponent(args.abstractComponentArgs),
-			// Initialize array elements with the provided port groups
-			mgs{
-				pros::MotorGroup(args.ports.bottom),
-				pros::MotorGroup(args.ports.mid),
-				pros::MotorGroup(args.ports.top)
-			},
-			dynamicScreen(args.dynamicScreen) {};
+		Disperser(DisperserArgs args) : AbstractComponent(args.abstractComponentArgs),
+										// Initialize array elements with the provided port groups
+										mgs{
+											pros::MotorGroup(args.ports.bottom),
+											pros::MotorGroup(args.ports.mid),
+											pros::MotorGroup(args.ports.top)},
+										dynamicScreen(args.dynamicScreen) {};
 
-		void opControl() override {
+		void opControl() override
+		{
 			handleDynamicScreen();
 
-			if (master->get_digital(pros::E_CONTROLLER_DIGITAL_L1)) {
+			if (master->get_digital(pros::E_CONTROLLER_DIGITAL_L1))
+			{
 				handleTopGoal();
-			} else if (master->get_digital(pros::E_CONTROLLER_DIGITAL_L2)) {
+			}
+			else if (master->get_digital(pros::E_CONTROLLER_DIGITAL_L2))
+			{
 				handleMidGoal();
-			} else if (master->get_digital(pros::E_CONTROLLER_DIGITAL_R2)) {
+			}
+			else if (master->get_digital(pros::E_CONTROLLER_DIGITAL_R2))
+			{
 				handleIntake();
-			} else if (master->get_digital(pros::E_CONTROLLER_DIGITAL_R1)) {
+			}
+			else if (master->get_digital(pros::E_CONTROLLER_DIGITAL_R1))
+			{
 				handleBottomGoal();
-			} else if (master->get_digital(pros::E_CONTROLLER_DIGITAL_A)) {
+			}
+			else if (master->get_digital(pros::E_CONTROLLER_DIGITAL_A))
+			{
 				handleSingleMid();
-			} else {
+			}
+			else
+			{
 				handleStop();
 			}
 		}
 	}; // class Disperser
 
-	class ForkMech : public AbstractMech {
+	class ForkMech : public AbstractMech
+	{
 	private:
 		BtnManager btnMgr;
+
 	protected:
 	public:
 		/// @brief Args for fork mechanism object
 		/// @param abstractComponentArgs Args for AbstractComponent object
-		struct ForkMechArgs {
+		struct ForkMechArgs
+		{
 			AbstractMechArgs abstractMechArgs;
 			pros::controller_digital_e_t btn = pros::E_CONTROLLER_DIGITAL_LEFT;
 		};
 
 		/// @brief Creates fork mechanism object
 		/// @param args Args for fork mechanism object (check args struct for more info)
-		ForkMech(ForkMechArgs args) : 
-			AbstractMech(args.abstractMechArgs),
-			btnMgr({{args.abstractMechArgs.abstractComponentArgs}, 
-				{args.btn, {std::bind(&ForkMech::toggle, this)}, {}, {}}
-			}) {};
+		ForkMech(ForkMechArgs args) : AbstractMech(args.abstractMechArgs),
+									  btnMgr({{args.abstractMechArgs.abstractComponentArgs},
+											  {args.btn, {std::bind(&ForkMech::toggle, this)}, {}, {}}})
+		{
+		}
 
-		void opControl() override {
+		void opControl() override
+		{
 			btnMgr.opControl();
 		}
 	}; // class ForkMech
 
 	/// @brief Class which manages all components
-	class ComponentManager : public AbstractComponent {
+	class ComponentManager : public AbstractComponent
+	{
 	private:
 	protected:
 	public:
@@ -1615,14 +1898,15 @@ namespace hyper {
 		ForkMech fork;
 
 		Timer timer;
-		
+
 		// All components are stored in this vector
-		vector<AbstractComponent*> components;
+		vector<AbstractComponent *> components;
 
 		/// @brief Args for component manager object passed to the chassis, such as ports
 		/// @param dvtPorts Ports for drivetrain
 		/// @param dispPorts Ports for disperser
-		struct ComponentManagerUserArgs {
+		struct ComponentManagerUserArgs
+		{
 			Drivetrain::DriveManager::DriveManagerUserArgs driveArgs;
 			Disperser::DisperserPorts dispPorts;
 			DynamicScreen::SensorPorts screenPorts;
@@ -1632,68 +1916,76 @@ namespace hyper {
 		/// @brief Args for component manager object
 		/// @param aca Args for AbstractComponent object
 		/// @param user Args for component manager object passed to the chassis
-		struct ComponentManagerArgs {
+		struct ComponentManagerArgs
+		{
 			AbstractComponentArgs aca;
 			ComponentManagerUserArgs user;
 		};
 
 		/// @brief Constructor for component manager object
 		/// @param args Args for component manager object (see args struct for more info)
-		ComponentManager(ComponentManagerArgs args) : 
-			AbstractComponent(args.aca),
+		ComponentManager(ComponentManagerArgs args) : AbstractComponent(args.aca),
 
-			drive({args.aca, args.user.driveArgs}),	
-			screen({args.aca, args.user.screenPorts}),
-			disp({args.aca, args.user.dispPorts, &screen}),
-			fork({{{args.aca, args.user.forkPort}}}),
-			timer({args.aca}) {
-				// Add component pointers to vector
-				// MUST BE DONE AFTER INITIALISATION not BEFORE because of pointer issues
-				components = {
-					&drive,
-					&disp,
-					&timer,
-					&fork,
-					&screen
-				};
-			};
+													  drive({args.aca, args.user.driveArgs}),
+													  screen({args.aca, args.user.screenPorts}),
+													  disp({args.aca, args.user.dispPorts, &screen}),
+													  fork({{{args.aca, args.user.forkPort}}}),
+													  timer({args.aca})
+		{
+			// Add component pointers to vector
+			// MUST BE DONE AFTER INITIALISATION not BEFORE because of pointer issues
+			components = {
+				&drive,
+				&disp,
+				&timer,
+				&fork,
+				&screen};
+		};
 
 		// Nice and simple :) definitely better than having to call each component individually
-		void opControl() override {
-			for (AbstractComponent* component : components) {
+		void opControl() override
+		{
+			for (AbstractComponent *component : components)
+			{
 				component->opControl();
 			}
 		}
 
-		void skillsPrep() override {
-			for (AbstractComponent* component : components) {
+		void skillsPrep() override
+		{
+			for (AbstractComponent *component : components)
+			{
 				component->skillsPrep();
 			}
 		}
 
-		void postAuton() override {
-			for (AbstractComponent* component : components) {
+		void postAuton() override
+		{
+			for (AbstractComponent *component : components)
+			{
 				component->postAuton();
 			}
 		}
 	}; // class ComponentManager
 
 	/// @brief Abstract class for auton e.g. match or skills autonomous
-	class AbstractAuton {
+	class AbstractAuton
+	{
 	private:
 	protected:
-		ComponentManager* cm;
+		ComponentManager *cm;
+
 	public:
 		/// @brief Args for auton object
 		/// @param cm Component manager object
-		struct AutonArgs {
-			ComponentManager* cm;
+		struct AutonArgs
+		{
+			ComponentManager *cm;
 		};
 
 		/// @brief Creates auton object
 		/// @param args Args for auton object (check args struct for more info)
-		AbstractAuton(AutonArgs args) : 
-			cm(args.cm) {};
+		AbstractAuton(AutonArgs args) : cm(args.cm) {};
 
 		/// @brief Runs the auton
 		virtual void run() = 0;
@@ -1701,46 +1993,49 @@ namespace hyper {
 		virtual ~AbstractAuton() = default;
 	}; // class AbstractAuton
 
-	class MatchAuton : public AbstractAuton {
+	class MatchAuton : public AbstractAuton
+	{
 	private:
-		void defaultLeft() {
+		void defaultLeft()
+		{
 			cm->fork.actuate(false);
 			cm->disp.handleIntake();
 
 			cm->drive.pid.lateral(17.5, 3);
 
 			pros::delay(1000);
-			
+
 			cm->drive.pid.turn(70, 2, 2500);
 			pros::lcd::print(0, "Stopping");
 			cm->disp.handleStop();
-			//cm->fork.actuate(true);
+			// cm->fork.actuate(true);
 
 			pros::delay(250);
 			pros::lcd::print(0, "TLAT Start");
-			
+
 			// to be implemented once our lateral function accepts dynamic checkpoint triggers
 			/*cm->drive.pid.lateral(15, 4, 2500, true, [this]() {
 				this->cm->fork.actuate(true);
 			});*/
-			
+
 			pros::lcd::print(0, "TLAT End");
 			pros::delay(250);
-			
+
 			cm->disp.handleMidGoal();
 			pros::delay(5000);
 		}
 
-		void defaultRight() {
+		void defaultRight()
+		{
 			// Mirror of defaultLeft: invert turn angles and use bottom goal instead of mid goal
 			cm->fork.actuate(false);
 			cm->disp.handleIntake();
 
-			cm->drive.pid.lateral(20, 4);
+			cm->drive.pid.lateral(24, 4);
 
 			pros::delay(1000);
 
-			//cm->drive.pid.lateral(-2, 4, 1000); // small back up to align with goal
+			// cm->drive.pid.lateral(-2, 4, 1000); // small back up to align with goal
 
 			pros::delay(500);
 
@@ -1750,7 +2045,7 @@ namespace hyper {
 			cm->disp.handleStop();
 
 			// was told not to deploy - just dont? alr ig :)))
-			//cm->fork.actuate(true);
+			// cm->fork.actuate(true);
 
 			pros::delay(250);
 			pros::lcd::print(0, "TLAT Start");
@@ -1761,16 +2056,14 @@ namespace hyper {
 			pros::delay(5000);
 		}
 
-		void advancedAuton() {
+		void advancedAuton()
+		{
 			// Mirror of defaultLeft: invert turn angles and use bottom goal instead of mid goal
 			cm->fork.actuate(false);
-			
 
-			cm->drive.pid.lateral(21,2);
+			cm->drive.pid.lateral(21, 2);
 
-			
-
-			//cm->drive.pid.lateral(-2, 4, 1000); // small back up to align with goal
+			// cm->drive.pid.lateral(-2, 4, 1000); // small back up to align with goal
 
 			pros::delay(500);
 
@@ -1782,19 +2075,19 @@ namespace hyper {
 			cm->fork.actuate(true);
 
 			// was told not to deploy - just dont? alr ig :)))
-			//cm->fork.actuate(true);
+			// cm->fork.actuate(true);
 
 			pros::delay(250);
 			pros::lcd::print(0, "TLAT Start");
 			cm->drive.pid.lateral(14, 4, 3000);
 			pros::delay(1000);
-			cm->drive.pid.lateral(-10,2);
+			cm->drive.pid.lateral(-10, 2);
 			pros::delay(500);
 
 			cm->disp.handleStop();
 			pros::lcd::print(0, "TLAT End");
 			cm->drive.pid.turn(185, 2, 2500); // inverted angle
-			 // bottom goal instead of mid goal
+											  // bottom goal instead of mid goal
 			pros::delay(500);
 			cm->drive.pid.lateral(10, 2);
 			pros::delay(500);
@@ -1813,7 +2106,8 @@ namespace hyper {
 
 		// NG = New Generation
 		// Cleansheet design, cleansheeet ideas.
-		void ngLeft() {
+		void ngLeft()
+		{
 			// Prepare: Fork enabled
 			cm->fork.actuate(true);
 
@@ -1822,7 +2116,7 @@ namespace hyper {
 			cm->drive.pid.turn(95);
 			cm->fork.actuate(false);
 			cm->disp.handleIntake();
-			cm->drive.pid.lateral(8,4);
+			cm->drive.pid.lateral(8, 4);
 
 			// Get blocks from RIGHT/0
 			pros::delay(1000);
@@ -1843,91 +2137,101 @@ namespace hyper {
 			cm->drive.pid.lateral(-5);
 		}
 
-		void ngRight() {
-
+		void ngRight()
+		{
 		}
 
-		void testRight90() {
-			
+		void testRight90()
+		{
 		}
 
-		void testReverse() {
+		void testReverse()
+		{
 			cm->drive.pid.lateral(-15);
 			pros::delay(10000);
 		}
 
-		void testTinyLat() {
+		void testTinyLat()
+		{
 			pros::delay(1000);
 			cm->drive.pid.lateral(10, 4);
 			pros::delay(10000);
 		}
 
-		void testFwd2Tiles() {
+		void testFwd2Tiles()
+		{
 			cm->drive.pid.lateral(48);
 		}
 
-		void testMechs() {
+		void testMechs()
+		{
 			cm->fork.actuate(false);
 		}
+
 	protected:
 	public:
 		/// @brief Args for match auton object
 		/// @param autonArgs Args for auton object
-		struct MatchAutonArgs {
+		struct MatchAutonArgs
+		{
 			AutonArgs autonArgs;
 		};
 
 		/// @brief Creates match auton object
 		/// @param args Args for match auton object (check args struct for more info)
-		MatchAuton(MatchAutonArgs args) : 
-			AbstractAuton(args.autonArgs) {};
+		MatchAuton(MatchAutonArgs args) : AbstractAuton(args.autonArgs) {};
 
-		void run() override {
-			//defaultLeft();
+		void run() override
+		{
+			// defaultLeft();
 			defaultRight();
-			
-			//advancedAuton();
-			
-			//ngLeft();
-			//ngRight();
 
-			//testRight90();
-			//testFwd2Tiles();
-			
-			//testTinyLat();
-			//testMechs();
-			//testReverse();
+			// advancedAuton();
+
+			// ngLeft();
+			// ngRight();
+
+			// testRight90();
+			// testFwd2Tiles();
+
+			// testTinyLat();
+			// testMechs();
+			// testReverse();
 		}
 	}; // class MatchAuton
 
-	class SkillsAuton : public AbstractAuton {
+	class SkillsAuton : public AbstractAuton
+	{
 	private:
-		void sector1() {
+		void sector1()
+		{
 			cm->fork.actuate(false);
 
 			cm->drive.pid.lateral(40);
 			cm->disp.handleMidGoal();
 
-			pros::delay(10000);	
+			pros::delay(10000);
 		}
-		
-		void sector2() {
 
+		void sector2()
+		{
 		}
+
 	protected:
 	public:
 		/// @brief Args for skills auton object
 		/// @param autonArgs Args for auton object
-		struct SkillsAutonArgs {
+		struct SkillsAutonArgs
+		{
 			AutonArgs autonArgs;
 		};
 
 		/// @brief Creates skills auton object
 		/// @param args Args for skills auton object (check args struct for more info)
-		SkillsAuton(SkillsAutonArgs args) : 
-			AbstractAuton(args.autonArgs) {};
+		SkillsAuton(SkillsAutonArgs args) : AbstractAuton(args.autonArgs) {};
 
-		void run() override {
+		void run() override
+		{
 			cm->tell(0, "Skills auton running");
 
 			sector1();
@@ -1936,13 +2240,15 @@ namespace hyper {
 	}; // class SkillsAuton
 
 	/// @brief Chassis class for controlling auton/driver control
-	class Chassis : public AbstractChassis {
+	class Chassis : public AbstractChassis
+	{
 	private:
 	protected:
 	public:
 		/// @brief Args for chassis object
 		/// @param cmUserArgs Args for component manager object
-		struct ChassisArgs {
+		struct ChassisArgs
+		{
 			ComponentManager::ComponentManagerUserArgs cmUserArgs;
 		};
 
@@ -1953,36 +2259,40 @@ namespace hyper {
 
 		/// @brief Creates chassis object
 		/// @param args Args for chassis object (check args struct for more info)
-		Chassis(ChassisArgs args) : 
-			AbstractChassis(),
-			cm({this, args.cmUserArgs}),
-			matchAutonManager({&cm}),
-			skillsAutonManager({&cm}) {};
+		Chassis(ChassisArgs args) : AbstractChassis(),
+									cm({this, args.cmUserArgs}),
+									matchAutonManager({&cm}),
+									skillsAutonManager({&cm}) {};
 
 		/// @brief Runs the opcontrol functions for each component
-		void opControl() override {
+		void opControl() override
+		{
 			cm.opControl();
 		}
 
 		/// @brief Auton function for the chassis
 		// 1000 = 70cm
-		void auton() override {
+		void auton() override
+		{
 			matchAutonManager.run();
 		}
 
 		/// @brief Skills auton function for the chassis
-		void skillsAuton() override {
+		void skillsAuton() override
+		{
 			skillsAutonManager.run();
 		}
 
 		/// @brief Skills preparation for opcontrol on the chassis
-		void skillsPrep() override {
+		void skillsPrep() override
+		{
 			// We need to run postAuton() first because these are what would prep for opcontrol normally
 			cm.skillsPrep();
 		}
 
 		/// @brief Post auton function for the chassis
-		void postAuton() override {
+		void postAuton() override
+		{
 			cm.postAuton();
 		}
 	}; // class Chassis
@@ -1991,7 +2301,7 @@ namespace hyper {
 // Global variables
 
 // DONT say just "chassis" because certain class properties have the same name
-hyper::AbstractChassis* currentChassis;
+hyper::AbstractChassis *currentChassis;
 
 /**
  * A callback function for LLEMU's center button.
@@ -2000,83 +2310,89 @@ hyper::AbstractChassis* currentChassis;
  * "I was pressed!" and nothing.
  */
 
-void initDefaultChassis() {
-	static hyper::Chassis defaultChassis({
-		{
-			// ComponentManagerUserArgs
-			{
-				// Drivetrain args
-				{{LEFT_DRIVE_PORTS, RIGHT_DRIVE_PORTS, IMU_PORT, LAT_ROT_DRIVE_PORT}},
-				// Disperser ports
-				{DISP_BOT_PORTS, DISP_MID_PORTS, DISP_TOP_PORTS},
-				// Dynamic screen ports
-				{SCREEN_TOP_PORT},
-				{FORK_MECH_PORT}
-			}
-		}
-	});
-	
+void initDefaultChassis()
+{
+	static hyper::Chassis defaultChassis({{// ComponentManagerUserArgs
+										   {
+											   // Drivetrain args
+											   {{LEFT_DRIVE_PORTS, RIGHT_DRIVE_PORTS, IMU_PORT, LAT_ROT_DRIVE_PORT}},
+											   // Disperser ports
+											   {DISP_BOT_PORTS, DISP_MID_PORTS, DISP_TOP_PORTS},
+											   // Dynamic screen ports
+											   {SCREEN_TOP_PORT},
+											   {FORK_MECH_PORT}}}});
+
 	currentChassis = &defaultChassis;
 }
 
-void initialize() {
+void initialize()
+{
 	pros::lcd::initialize();
 
 	INIT_CHASSIS();
 }
 
-void disabled() {
+void disabled()
+{
 	// when robot is paused
 }
 
-void competition_initialize() {
+void competition_initialize()
+{
 	// addiitonal initialization for competition mode
 }
 
-void autonomous() {
-	#if DO_MATCH_AUTON
-		currentChassis->auton();
-	#elif DO_SKILLS_AUTON
-		currentChassis->skillsAuton();
-	#endif
+void autonomous()
+{
+#if DO_MATCH_AUTON
+	currentChassis->auton();
+#elif DO_SKILLS_AUTON
+	currentChassis->skillsAuton();
+#endif
 }
 
-void preControl() {
+void preControl()
+{
 	pros::lcd::set_text(0, "> 1408Hyper mainControl ready");
 
 	bool inComp = pros::competition::is_connected();
 
 	// Run autonomous even if we are NOT in the compeition
-	if (!inComp) {
+	if (!inComp)
+	{
 		autonomous();
 	}
 
-	#if DO_SKILLS_PREP
-		currentChassis->skillsPrep();
-	#endif
+#if DO_SKILLS_PREP
+	currentChassis->skillsPrep();
+#endif
 
-	// only do post auton if we are not in skills prep
-	// 21/06/2025: What the hell does this comment even mean?
-	#if DO_POST_AUTON
-		currentChassis->postAuton();
-	#endif
+// only do post auton if we are not in skills prep
+// 21/06/2025: What the hell does this comment even mean?
+#if DO_POST_AUTON
+	currentChassis->postAuton();
+#endif
 }
 
-void mainloopControl() {
+void mainloopControl()
+{
 	bool opControlRunning = DO_OP_CONTROL;
 	// Chassis control loop
-	while (opControlRunning) {
+	while (opControlRunning)
+	{
 		// Chassis opcontrol
 		currentChassis->opControl();
 	}
 }
 
-void mainControl() {
+void mainControl()
+{
 	preControl();
 	mainloopControl();
 }
 
-void opcontrol() {
+void opcontrol()
+{
 	CURRENT_OPCONTROL();
 }
 
