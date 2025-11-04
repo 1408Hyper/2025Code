@@ -2061,7 +2061,7 @@ namespace hyper
 			// Mirror of defaultLeft: invert turn angles and use bottom goal instead of mid goal
 			cm->fork.actuate(false);
 
-			cm->drive.pid.lateral(21, 2);
+			cm->drive.pid.lateral(22, 2);
 
 			// cm->drive.pid.lateral(-2, 4, 1000); // small back up to align with goal
 
@@ -2079,26 +2079,26 @@ namespace hyper
 
 			pros::delay(250);
 			pros::lcd::print(0, "TLAT Start");
-			cm->drive.pid.lateral(14, 4, 3000);
-			pros::delay(1000);
-			cm->drive.pid.lateral(-10, 2);
+			cm->drive.pid.lateral(14, 2, 3000);
 			pros::delay(500);
+			cm->drive.pid.lateral(-10, 2, 3000);
+			cm->fork.actuate(false);
 
 			cm->disp.handleStop();
 			pros::lcd::print(0, "TLAT End");
-			cm->drive.pid.turn(185, 2, 2500); // inverted angle
+			cm->drive.pid.turn(185, 2); // inverted angle
 											  // bottom goal instead of mid goal
 			pros::delay(500);
-			cm->drive.pid.lateral(10, 2);
+			cm->drive.pid.lateral(5, 2);
 			pros::delay(500);
 			cm->disp.handleTopGoal();
 			pros::delay(5000);
 			cm->disp.handleStop();
 			cm->drive.pid.lateral(-12, 2);
 			pros::delay(500);
-			cm->drive.pid.turn(-55, 2, 2500); // inverted angle
+			cm->drive.pid.turn(-50, 2, 2500); // inverted angle
 			pros::delay(500);
-			cm->drive.pid.lateral(45, 2);
+			cm->drive.pid.lateral(35, 2);
 			pros::delay(500);
 			cm->disp.handleBottomGoal();
 			pros::delay(5000);
@@ -2184,9 +2184,10 @@ namespace hyper
 		void run() override
 		{
 			// defaultLeft();
-			defaultRight();
+			//defaultRight();
 
-			// advancedAuton();
+			
+			advancedAuton();
 
 			// ngLeft();
 			// ngRight();
