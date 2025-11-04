@@ -1373,7 +1373,7 @@ namespace hyper
 
 			TurnCoefficients calculateArcadeTurns(float turn, float lateral)
 			{
-				turn *= 1;
+				turn *= -1;
 
 				TurnCoefficients turnCoeffs = {turn, turn};
 
@@ -1487,7 +1487,7 @@ namespace hyper
 		public:
 			/// @brief Sets the driver control mode
 			/// @param mode Mode to set the driver control to
-			void setDriveControlMode(DriveControlMode mode = DriveControlMode::ATAC)
+			void setDriveControlMode(DriveControlMode mode = DriveControlMode::ARCADE)
 			{
 				driveControlMode = mode;
 
