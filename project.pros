@@ -257,7 +257,7 @@
     "upload_options": {
       "description": "1408H 2025 Season Code",
       "icon": "X",
-      "slot": 2
+      "slot": 1
     },
     "use_early_access": false
   }
