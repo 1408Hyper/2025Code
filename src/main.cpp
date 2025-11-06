@@ -2061,13 +2061,13 @@ namespace hyper
 			// Mirror of defaultLeft: invert turn angles and use bottom goal instead of mid goal
 			cm->fork.actuate(false);
 
-			cm->drive.pid.lateral(22, 2);
+			cm->drive.pid.lateral(28, 2);
 
 			// cm->drive.pid.lateral(-2, 4, 1000); // small back up to align with goal
 
 			pros::delay(500);
 
-			cm->drive.pid.turn(95, 2, 2500); // inverted angle
+			cm->drive.pid.turn(88, 2, 2500); // inverted angle
 
 			pros::lcd::print(0, "Stopping");
 			cm->disp.handleIntake();
@@ -2079,17 +2079,17 @@ namespace hyper
 
 			pros::delay(250);
 			pros::lcd::print(0, "TLAT Start");
-			cm->drive.pid.lateral(14, 2, 3000);
+			cm->drive.pid.lateral(18, 2, 1500);
 			pros::delay(500);
-			cm->drive.pid.lateral(-10, 2, 3000);
+			cm->drive.pid.lateral(-7, 2, 1000);
 			cm->fork.actuate(false);
 
 			cm->disp.handleStop();
 			pros::lcd::print(0, "TLAT End");
-			cm->drive.pid.turn(185, 2); // inverted angle
+			cm->drive.pid.turn(180, 2); // inverted angle
 											  // bottom goal instead of mid goal
 			pros::delay(500);
-			cm->drive.pid.lateral(5, 2);
+			cm->drive.pid.lateral(9, 2);
 			pros::delay(500);
 			cm->disp.handleTopGoal();
 			pros::delay(5000);
@@ -2098,7 +2098,10 @@ namespace hyper
 			pros::delay(500);
 			cm->drive.pid.turn(-50, 2, 2500); // inverted angle
 			pros::delay(500);
-			cm->drive.pid.lateral(35, 2);
+			cm->disp.handleIntake();
+			cm->drive.pid.lateral(40, 2);
+			pros::delay(500);
+			cm->disp.handleStop();
 			pros::delay(500);
 			cm->disp.handleBottomGoal();
 			pros::delay(5000);
@@ -2183,13 +2186,13 @@ namespace hyper
 
 		void run() override
 		{
-			// defaultLeft();
+			defaultLeft();
 			//defaultRight();
 
 			
-			advancedAuton();
+			//advancedAuton();
 
-			// ngLeft();
+			//ngLeft();
 			// ngRight();
 
 			// testRight90();
@@ -2206,12 +2209,7 @@ namespace hyper
 	private:
 		void sector1()
 		{
-			cm->fork.actuate(false);
-
-			cm->drive.pid.lateral(40);
-			cm->disp.handleMidGoal();
-
-			pros::delay(10000);
+			cm->disp.handleIntake();
 		}
 
 		void sector2()

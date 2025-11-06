@@ -1,7 +1,7 @@
 {
   "py/object": "pros.conductor.project.Project",
   "py/state": {
-    "project_name": "LeftMatchATAC25",
+    "project_name": "Left",
     "target": "v5",
     "templates": {
       "kernel": {
