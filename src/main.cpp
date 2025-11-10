@@ -2186,11 +2186,11 @@ namespace hyper
 
 		void run() override
 		{
-			defaultLeft();
+			//defaultLeft();
 			//defaultRight();
 
 			
-			//advancedAuton();
+			advancedAuton();
 
 			//ngLeft();
 			// ngRight();
