@@ -2002,7 +2002,7 @@ namespace hyper
 			cm->disp.handleIntake();
 
 			cm->drive.pid.lateral(5, 2);
-			cm->drive.pid.lateral(7, 3);
+			cm->drive.pid.lateral(6, 3);
 
 			pros::delay(1000);
 
@@ -2223,7 +2223,7 @@ namespace hyper
 		{ 
 			cm->fork.actuate(false);
 
-			cm->drive.pid.lateral(30, 3);
+			cm->drive.pid.lateral(32, 3);
 
 			// cm->drive.pid.lateral(-2, 4, 1000); // small back up to align with goal
 
@@ -2236,13 +2236,19 @@ namespace hyper
 			pros::delay(700);
 			cm->fork.actuate(true); // matchloader actuated
 			pros::delay(250);
-			cm->drive.pid.lateral(15,3); // next couple lines for jiggle to get all cubes
+			cm->drive.pid.lateral(10,2,2000); // next couple lines for jiggle to get all cubes
+			
 			pros::lcd::print(0, "TLAT End");
 			pros::delay(2000);
-			cm->drive.pid.lateral(-7,2);
+			cm->drive.pid.lateral(-6,2);
 			pros::delay(2000);
 			cm->drive.pid.turn(130, 2,1000); // inverted angle
-			cm->drive.pid.lateral(20,3);
+			pros::delay(500);
+			cm->fork.actuate(false);
+			cm->drive.pid.lateral(40,3);
+			cm->disp.handleStop();
+			cm->disp.handleBottomGoal();
+
 		}
 
 		void sector2()
