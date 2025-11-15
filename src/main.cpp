@@ -2001,7 +2001,8 @@ namespace hyper
 			cm->fork.actuate(false);
 			cm->disp.handleIntake();
 
-			cm->drive.pid.lateral(17.5, 3);
+			cm->drive.pid.lateral(5, 2);
+			cm->drive.pid.lateral(7, 3);
 
 			pros::delay(1000);
 
@@ -2020,9 +2021,19 @@ namespace hyper
 
 			pros::lcd::print(0, "TLAT End");
 			pros::delay(250);
-
+			cm->drive.pid.lateral(7, 3);
 			cm->disp.handleMidGoal();
-			pros::delay(5000);
+			pros::delay(2000);
+			cm->drive.pid.lateral(-40, 2);
+			pros::delay(500);
+			cm->disp.handleStop();
+			pros::delay(500);
+			cm->drive.pid.turn(130, 2);
+			pros::delay(500);
+			cm->fork.actuate(true);
+			cm->disp.handleIntake();
+			pros::delay(500);
+			cm->drive.pid.lateral(10, 2);
 		}
 
 		void defaultRight()
@@ -2061,13 +2072,13 @@ namespace hyper
 			// Mirror of defaultLeft: invert turn angles and use bottom goal instead of mid goal
 			cm->fork.actuate(false);
 
-			cm->drive.pid.lateral(28, 2);
+			cm->drive.pid.lateral(13, 1);
 
 			// cm->drive.pid.lateral(-2, 4, 1000); // small back up to align with goal
 
 			pros::delay(500);
 
-			cm->drive.pid.turn(88, 2, 2500); // inverted angle
+			cm->drive.pid.turn(75, 1); // inverted angle
 
 			pros::lcd::print(0, "Stopping");
 			cm->disp.handleIntake();
@@ -2079,22 +2090,23 @@ namespace hyper
 
 			pros::delay(250);
 			pros::lcd::print(0, "TLAT Start");
-			cm->drive.pid.lateral(18, 2, 1500);
+			cm->drive.pid.lateral(20, 2, 1500);
 			pros::delay(500);
-			cm->drive.pid.lateral(-7, 2, 1000);
+			cm->drive.pid.lateral(-10, 1, 1000);
 			cm->fork.actuate(false);
 
-			cm->disp.handleStop();
+			
 			pros::lcd::print(0, "TLAT End");
-			cm->drive.pid.turn(180, 2); // inverted angle
+			cm->drive.pid.turn(180, 2,1000); // inverted angle
+			cm->disp.handleStop();
 											  // bottom goal instead of mid goal
 			pros::delay(500);
-			cm->drive.pid.lateral(9, 2);
+			cm->drive.pid.lateral(4, 1);
 			pros::delay(500);
 			cm->disp.handleTopGoal();
 			pros::delay(5000);
 			cm->disp.handleStop();
-			cm->drive.pid.lateral(-12, 2);
+			cm->drive.pid.lateral(-12, 1);
 			pros::delay(500);
 			cm->drive.pid.turn(-50, 2, 2500); // inverted angle
 			pros::delay(500);
@@ -2186,11 +2198,11 @@ namespace hyper
 
 		void run() override
 		{
-			//defaultLeft();
+			defaultLeft();
 			//defaultRight();
 
 			
-			advancedAuton();
+			//advancedAuton();
 
 			//ngLeft();
 			// ngRight();
@@ -2208,8 +2220,29 @@ namespace hyper
 	{
 	private:
 		void sector1()
-		{
+		{ 
+			cm->fork.actuate(false);
+
+			cm->drive.pid.lateral(30, 3);
+
+			// cm->drive.pid.lateral(-2, 4, 1000); // small back up to align with goal
+
+			pros::delay(500);
+
+			cm->drive.pid.turn(100, 3); // inverted angle towards the matchload
+
+			pros::lcd::print(0, "Stopping");
 			cm->disp.handleIntake();
+			pros::delay(700);
+			cm->fork.actuate(true); // matchloader actuated
+			pros::delay(250);
+			cm->drive.pid.lateral(15,3); // next couple lines for jiggle to get all cubes
+			pros::lcd::print(0, "TLAT End");
+			pros::delay(2000);
+			cm->drive.pid.lateral(-7,2);
+			pros::delay(2000);
+			cm->drive.pid.turn(130, 2,1000); // inverted angle
+			cm->drive.pid.lateral(20,3);
 		}
 
 		void sector2()
@@ -2234,7 +2267,6 @@ namespace hyper
 			cm->tell(0, "Skills auton running");
 
 			sector1();
-			sector2();
 		}
 	}; // class SkillsAuton
 

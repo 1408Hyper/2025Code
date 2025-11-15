@@ -1,7 +1,7 @@
 {
   "py/object": "pros.conductor.project.Project",
   "py/state": {
-    "project_name": "Left",
+    "project_name": "SkillsAuton",
     "target": "v5",
     "templates": {
       "kernel": {
@@ -256,8 +256,8 @@
     },
     "upload_options": {
       "description": "1408H 2025 Season Code",
-      "icon": "X",
-      "slot": 1
+      "icon": "pros",
+      "slot": 2
     },
     "use_early_access": false
   }
