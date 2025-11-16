@@ -2021,14 +2021,14 @@ namespace hyper
 
 			pros::lcd::print(0, "TLAT End");
 			pros::delay(250);
-			cm->drive.pid.lateral(7, 3);
+			cm->drive.pid.lateral(10, 3);
 			cm->disp.handleMidGoal();
 			pros::delay(2000);
-			cm->drive.pid.lateral(-40, 2);
+			cm->drive.pid.lateral(-50, 2);
 			pros::delay(500);
 			cm->disp.handleStop();
 			pros::delay(500);
-			cm->drive.pid.turn(130, 2);
+			cm->drive.pid.turn(150, 2);
 			pros::delay(500);
 			cm->fork.actuate(true);
 			cm->disp.handleIntake();
