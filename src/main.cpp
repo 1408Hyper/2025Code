@@ -802,6 +802,7 @@ namespace hyper
 				tRot.reset();
 				lRot.reset();
 			}
+			
 
 			void calibrateAll(bool blocking = true)
 			{
@@ -1487,7 +1488,7 @@ namespace hyper
 		public:
 			/// @brief Sets the driver control mode
 			/// @param mode Mode to set the driver control to
-			void setDriveControlMode(DriveControlMode mode = DriveControlMode::ATAC)
+			void setDriveControlMode(DriveControlMode mode = DriveControlMode::ARCADE)
 			{
 				driveControlMode = mode;
 
@@ -1707,6 +1708,7 @@ namespace hyper
 			mgs[MotorID::BOTTOM].move(-127);
 		}
 
+		
 		void handleTopLower()
 		{
 			if (currentCycles >= resetCycles)
@@ -1896,6 +1898,7 @@ namespace hyper
 		Disperser disp;
 
 		ForkMech fork;
+		ForkMech descore;
 
 		Timer timer;
 
@@ -1911,6 +1914,7 @@ namespace hyper
 			Disperser::DisperserPorts dispPorts;
 			DynamicScreen::SensorPorts screenPorts;
 			AnalogPort forkPort;
+			AnalogPort descorePort;
 		};
 
 		/// @brief Args for component manager object
@@ -1930,6 +1934,7 @@ namespace hyper
 													  screen({args.aca, args.user.screenPorts}),
 													  disp({args.aca, args.user.dispPorts, &screen}),
 													  fork({{{args.aca, args.user.forkPort}}}),
+													  descore({{{args.aca, args.user.descorePort}, pros::E_CONTROLLER_DIGITAL_UP}}),
 													  timer({args.aca})
 		{
 			// Add component pointers to vector
@@ -1939,7 +1944,9 @@ namespace hyper
 				&disp,
 				&timer,
 				&fork,
-				&screen};
+				&descore,
+				&screen
+			};
 		};
 
 		// Nice and simple :) definitely better than having to call each component individually
@@ -2002,7 +2009,7 @@ namespace hyper
 			cm->disp.handleIntake();
 
 			cm->drive.pid.lateral(5, 2);
-			cm->drive.pid.lateral(5, 3);
+			cm->drive.pid.lateral(9, 3);
 
 			pros::delay(1000);
 
@@ -2024,16 +2031,16 @@ namespace hyper
 			cm->drive.pid.lateral(10, 3);
 			cm->disp.handleMidGoal();
 			pros::delay(2000);
-			cm->drive.pid.lateral(-50, 2);
+			cm->drive.pid.lateral(-35, 2);
 			pros::delay(500);
 			cm->disp.handleStop();
 			pros::delay(500);
-			cm->drive.pid.turn(150, 2);
+			cm->drive.pid.turn(130, 2);
 			pros::delay(500);
 			cm->fork.actuate(true);
 			cm->disp.handleIntake();
 			pros::delay(500);
-			cm->drive.pid.lateral(10, 2);
+			cm->drive.pid.lateral(15, 3);
 		}
 
 		void defaultRight()
@@ -2331,8 +2338,12 @@ void initDefaultChassis()
 											   // Disperser ports
 											   {DISP_BOT_PORTS, DISP_MID_PORTS, DISP_TOP_PORTS},
 											   // Dynamic screen ports
-											   {SCREEN_TOP_PORT},
-											   {FORK_MECH_PORT}}}});
+											   //{SCREEN_TOP_PORT},
+											   //AI Vision Sensor Port
+											   {AI_VISION_PORT},
+											   {FORK_MECH_PORT},
+											   {DESCORE_MECH_PORT}
+											}}});
 
 	currentChassis = &defaultChassis;
 }

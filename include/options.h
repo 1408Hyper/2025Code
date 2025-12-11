@@ -11,6 +11,7 @@
 // Analog ports
 
 #define FORK_MECH_PORT 'H'
+#define DESCORE_MECH_PORT 'F'
 
 // Telemetry ports
 
@@ -19,7 +20,7 @@
 // Rotary encoder (Lateral)
 #define LAT_ROT_DRIVE_PORT 12
 // AI Vision
-#define AI_VISION_PORT 3
+#define AI_VISION_PORT 6
 // GPS Port
 #define GPS_PORT 4
 
