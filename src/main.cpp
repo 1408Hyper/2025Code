@@ -2008,12 +2008,11 @@ namespace hyper
 			cm->fork.actuate(false);
 			cm->disp.handleIntake();
 
-			cm->drive.pid.lateral(5, 2);
-			cm->drive.pid.lateral(9, 3);
+			cm->drive.pid.lateral(16, 2);
 
 			pros::delay(1000);
 
-			cm->drive.pid.turn(70, 2, 2500);
+			cm->drive.pid.turn(65, 2, 2500);
 			pros::lcd::print(0, "Stopping");
 			cm->disp.handleStop();
 			// cm->fork.actuate(true);
@@ -2028,10 +2027,10 @@ namespace hyper
 
 			pros::lcd::print(0, "TLAT End");
 			pros::delay(250);
-			cm->drive.pid.lateral(10, 3);
+			cm->drive.pid.lateral(5, 3);
 			cm->disp.handleMidGoal();
 			pros::delay(2000);
-			cm->drive.pid.lateral(-35, 2);
+			cm->drive.pid.lateral(-40, 2);
 			pros::delay(500);
 			cm->disp.handleStop();
 			pros::delay(500);
@@ -2040,7 +2039,7 @@ namespace hyper
 			cm->fork.actuate(true);
 			cm->disp.handleIntake();
 			pros::delay(500);
-			cm->drive.pid.lateral(15, 3);
+			cm->drive.pid.lateral(15, 2);
 		}
 
 		void defaultRight()
@@ -2049,7 +2048,7 @@ namespace hyper
 			cm->fork.actuate(false);
 			cm->disp.handleIntake();
 
-			cm->drive.pid.lateral(24, 4);
+			cm->drive.pid.lateral(23, 4);
 
 			pros::delay(1000);
 
@@ -2067,7 +2066,7 @@ namespace hyper
 
 			pros::delay(250);
 			pros::lcd::print(0, "TLAT Start");
-			cm->drive.pid.lateral(14, 4, 3000);
+			cm->drive.pid.lateral(10, 4, 3000);
 			pros::lcd::print(0, "TLAT End");
 
 			cm->disp.handleBottomGoal(); // bottom goal instead of mid goal
@@ -2076,44 +2075,45 @@ namespace hyper
 
 		void advancedAuton()
 		{
+			cm->fork.actuate(true);
 			// Mirror of defaultLeft: invert turn angles and use bottom goal instead of mid goal
-			cm->fork.actuate(false);
+			
 
-			cm->drive.pid.lateral(13, 1);
+			cm->drive.pid.lateral(25, 2);
 
 			// cm->drive.pid.lateral(-2, 4, 1000); // small back up to align with goal
 
 			pros::delay(500);
 
-			cm->drive.pid.turn(75, 1); // inverted angle
+			cm->drive.pid.turn(80, 2); // inverted angle
 
 			pros::lcd::print(0, "Stopping");
 			cm->disp.handleIntake();
-			pros::delay(1000);
-			cm->fork.actuate(true);
+			pros::delay(700);
+			
 
 			// was told not to deploy - just dont? alr ig :)))
 			// cm->fork.actuate(true);
 
 			pros::delay(250);
 			pros::lcd::print(0, "TLAT Start");
-			cm->drive.pid.lateral(20, 2, 1500);
+			cm->drive.pid.lateral(15, 1, 1500);
 			pros::delay(500);
-			cm->drive.pid.lateral(-10, 1, 1000);
-			cm->fork.actuate(false);
+			cm->drive.pid.lateral(-10, 3, 1000);
 
 			
 			pros::lcd::print(0, "TLAT End");
-			cm->drive.pid.turn(180, 2,1000); // inverted angle
+			cm->drive.pid.turn(175, 2,1000); // inverted angle
+			cm->fork.actuate(false);
 			cm->disp.handleStop();
 											  // bottom goal instead of mid goal
 			pros::delay(500);
-			cm->drive.pid.lateral(4, 1);
+			cm->drive.pid.lateral(4, 3);
 			pros::delay(500);
 			cm->disp.handleTopGoal();
 			pros::delay(5000);
 			cm->disp.handleStop();
-			cm->drive.pid.lateral(-12, 1);
+			cm->drive.pid.lateral(-12, 3);
 			pros::delay(500);
 			cm->drive.pid.turn(-50, 2, 2500); // inverted angle
 			pros::delay(500);
@@ -2205,11 +2205,11 @@ namespace hyper
 
 		void run() override
 		{
-			defaultLeft();
+			//defaultLeft();
 			//defaultRight();
 
 			
-			//advancedAuton();
+			advancedAuton();
 
 			//ngLeft();
 			// ngRight();
@@ -2229,8 +2229,26 @@ namespace hyper
 		void sector1()
 		{ 
 			cm->disp.handleIntake();
-			
+			cm->drive.pid.lateral(20);
 
+			cm->fork.actuate(true);
+			pros::delay(500);
+			cm->drive.pid.turn(-90);
+			pros::delay(500);
+			cm->drive.pid.lateral(10, 2, 2000);
+			pros::delay(5000);
+			cm->drive.pid.lateral(10, 2, 2000);
+			pros::delay(5000);
+		
+			cm->drive.pid.lateral(-5);
+			pros::delay(5000);
+			cm->disp.handleStop();
+			pros::delay(5000);
+			cm->fork.actuate(false);
+			cm->drive.pid.uTurn();
+			pros::delay(5000);
+			cm->drive.pid.lateral(5);
+			cm->disp.handleTopGoal();
 		}
 
 		void sector2()
