@@ -1763,15 +1763,15 @@ namespace hyper
 		void handleMidGoal()
 		{
 			// normal spin MID normal spin BOT and TOP
-			mgs[MotorID::MID].move(127);
-			mgs[MotorID::BOTTOM].move(-127);
+			mgs[MotorID::MID].move(-127);
+			mgs[MotorID::BOTTOM].move(127);
 			mgs[MotorID::TOP].move(-127);
 		}
 
 		void handleBottomGoal()
 		{
 			// reverse spin MID and BOT
-			mgs[MotorID::BOTTOM].move(127);
+			mgs[MotorID::BOTTOM].move(-127);
 			mgs[MotorID::MID].move(127);
 		}
 
@@ -2066,10 +2066,10 @@ namespace hyper
 
 			pros::delay(250);
 			pros::lcd::print(0, "TLAT Start");
-			cm->drive.pid.lateral(10, 4, 3000);
+			cm->drive.pid.lateral(8, 4, 3000);
 			pros::lcd::print(0, "TLAT End");
 
-			cm->disp.handleBottomGoal(); // bottom goal instead of mid goal
+			cm->disp.handleMidGoal(); // bottom goal instead of mid goal
 			pros::delay(5000);
 		}
 
@@ -2102,19 +2102,16 @@ namespace hyper
 			cm->drive.pid.lateral(-10, 3, 1000);
 
 			
-			pros::lcd::print(0, "TLAT End");
-			cm->drive.pid.turn(175, 2,1000); // inverted angle
-			cm->fork.actuate(false);
+			
 			cm->disp.handleStop();
 											  // bottom goal instead of mid goal
+			cm->drive.pid.turn(20, 2); // inverted angle
+			
 			pros::delay(500);
-			cm->drive.pid.lateral(4, 3);
-			pros::delay(500);
-			cm->disp.handleTopGoal();
-			pros::delay(5000);
 			cm->disp.handleStop();
-			cm->drive.pid.lateral(-12, 3);
+			cm->drive.pid.lateral(-20, 2);
 			pros::delay(500);
+			cm->disp.handleMidGoal();
 			cm->drive.pid.turn(-50, 2, 2500); // inverted angle
 			pros::delay(500);
 			cm->disp.handleIntake();
@@ -2122,7 +2119,7 @@ namespace hyper
 			pros::delay(500);
 			cm->disp.handleStop();
 			pros::delay(500);
-			cm->disp.handleBottomGoal();
+			cm->disp.handleMidGoal();
 			pros::delay(5000);
 		}
 
@@ -2206,10 +2203,10 @@ namespace hyper
 		void run() override
 		{
 			//defaultLeft();
-			//defaultRight();
+			defaultRight();
 
 			
-			advancedAuton();
+			//advancedAuton();
 
 			//ngLeft();
 			// ngRight();
