@@ -1664,11 +1664,11 @@ namespace hyper
 		// Struct to index motorGroupArray
 		struct MotorID
 		{
-			const static uint8_t BOTTOM = 0;
-			const static uint8_t MID = 1;
-			const static uint8_t TOP = 2;
+			//const static uint8_t BOTTOM = 0;
+			//const static uint8_t MID = 1;
+			const static uint8_t SCORING = 0;
 		}; // struct MotorID
-
+		
 		DynamicScreen *dynamicScreen;
 
 		// How many cycles to DELAY, how many cycles to STOP.
@@ -1753,7 +1753,8 @@ namespace hyper
 		void handleTopGoal()
 		{
 			// reverse spin MID and normal spin BOT and reverse spin TOP
-			mgs[MotorID::TOP].move(127);
+			mgs[MotorID::SCORING].move(127);
+			
 
 			//handleTopLower();
 
@@ -1801,9 +1802,9 @@ namespace hyper
 	public:
 		struct DisperserPorts
 		{
-			MGPorts bottom;
-			MGPorts mid;
-			MGPorts top;
+			//MGPorts bottom;
+			//MGPorts mid;
+			MGPorts score;
 		};
 
 		/// @brief Args for disperser object
@@ -1820,9 +1821,9 @@ namespace hyper
 		Disperser(DisperserArgs args) : AbstractComponent(args.abstractComponentArgs),
 										// Initialize array elements with the provided port groups
 										mgs{
-											pros::MotorGroup(args.ports.bottom),
-											pros::MotorGroup(args.ports.mid),
-											pros::MotorGroup(args.ports.top)},
+											//pros::MotorGroup(args.ports.bottom),
+											//pros::MotorGroup(args.ports.mid),
+											pros::MotorGroup(args.ports.score)},
 										dynamicScreen(args.dynamicScreen) {};
 
 		void opControl() override
@@ -1899,6 +1900,7 @@ namespace hyper
 
 		ForkMech fork;
 		ForkMech descore;
+		ForkMech ballblocker;
 
 		Timer timer;
 
@@ -1915,6 +1917,7 @@ namespace hyper
 			DynamicScreen::SensorPorts screenPorts;
 			AnalogPort forkPort;
 			AnalogPort descorePort;
+			AnalogPort ballBlockerPort;
 		};
 
 		/// @brief Args for component manager object
@@ -1935,6 +1938,7 @@ namespace hyper
 													  disp({args.aca, args.user.dispPorts, &screen}),
 													  fork({{{args.aca, args.user.forkPort}}}),
 													  descore({{{args.aca, args.user.descorePort}, pros::E_CONTROLLER_DIGITAL_UP}}),
+													  ballblocker({{{args.aca, args.user.ballBlockerPort}, pros::E_CONTROLLER_DIGITAL_DOWN}}),
 													  timer({args.aca})
 		{
 			// Add component pointers to vector
@@ -1945,6 +1949,7 @@ namespace hyper
 				&timer,
 				&fork,
 				&descore,
+				&ballblocker,
 				&screen
 			};
 		};
@@ -2354,13 +2359,14 @@ void initDefaultChassis()
 											   // Drivetrain args
 											   {{LEFT_DRIVE_PORTS, RIGHT_DRIVE_PORTS, IMU_PORT, LAT_ROT_DRIVE_PORT}},
 											   // Disperser ports
-											   {DISP_BOT_PORTS, DISP_MID_PORTS, DISP_TOP_PORTS},
+											   {DISP_SCORING_PORT},
 											   // Dynamic screen ports
 											   //{SCREEN_TOP_PORT},
 											   //AI Vision Sensor Port
 											   {AI_VISION_PORT},
 											   {FORK_MECH_PORT},
-											   {DESCORE_MECH_PORT}
+											   {DESCORE_MECH_PORT},
+											   {BALL_BLOCKER_MECH_PORT}
 											}}});
 
 	currentChassis = &defaultChassis;
