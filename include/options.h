@@ -13,6 +13,8 @@
 #define FORK_MECH_PORT 'H'
 #define DESCORE_MECH_PORT 'F'
 #define BALL_BLOCKER_MECH_PORT 'G'
+#define MID_PUMP_PORT 'E'
+
 
 // Telemetry ports
 
