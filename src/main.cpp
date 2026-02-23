@@ -1660,152 +1660,25 @@ namespace hyper
 
 	class Disperser : public AbstractComponent
 	{
-	public:
-		// Struct to index motorGroupArray
-		struct MotorID
-		{
-			//const static uint8_t BOTTOM = 0;
-			//const static uint8_t MID = 1;
-			const static uint8_t SCORING = 0;
-		}; // struct MotorID
-		
-		DynamicScreen *dynamicScreen;
-
-		// How many cycles to DELAY, how many cycles to STOP.
-		int delayCycles = 10;
-		int resetCycles = 200;
-
-		int currentCycles = 0;
-
-		// Replaced individual motor groups with an array for indexed access
-		std::array<pros::MotorGroup, 3> mgs;
-
-		/*void handleTopDetected() {
-			// if rejecting, stop mid and bot
-			mgs[MotorID::MID].move(0);
-			mgs[MotorID::BOTTOM].move(0);
-		}
-
-		void handleTopUndetected() {
-			// if not rejecting, spin mid and bot
-			mgs[MotorID::MID].move(127);
-			mgs[MotorID::BOTTOM].move(-127);
-		}*/
-
-		void handleTopDetected()
-		{
-			currentCycles++;
-		}
-
-		void handleTopUndetected()
-		{
-			currentCycles = 0;
-		}
-
-		void handleTLFallback()
-		{
-			mgs[MotorID::MID].move(127);
-			mgs[MotorID::BOTTOM].move(-127);
-		}
-
-		
-		void handleTopLower()
-		{
-			if (currentCycles >= resetCycles)
-			{
-				currentCycles = 0;
-			}
-
-			if (currentCycles <= delayCycles)
-			{
-				// if not rejecting, spin mid and bot
-				handleTLFallback();
-			}
-			else
-			{
-				// if rejecting, stop mid and bot
-				mgs[MotorID::MID].move(0);
-				mgs[MotorID::BOTTOM].move(0);
-			}
-		}
-
-		void handleDynamicScreen()
-		{
-			DynamicScreen::State state = dynamicScreen->getState();
-
-			switch (state)
-			{
-			case DynamicScreen::State::DETECTED:
-				handleTopDetected();
-				break;
-			case DynamicScreen::State::UNDETECTED:
-				handleTopUndetected();
-				break;
-			default:
-				handleTopUndetected();
-				break;
-			}
-
-			// DEBUG: print current cycles
-			pros::lcd::print(4, ("Current Cycles: " + std::to_string(currentCycles)).c_str());
-		}
-
-		void handleTopGoal()
-		{
-			// reverse spin MID and normal spin BOT and reverse spin TOP
-			mgs[MotorID::SCORING].move(127);
-			
-
-			//handleTopLower();
-
-			handleTLFallback();
-		}
-
-		void handleMidGoal()
-		{
-			// normal spin MID normal spin BOT and TOP
-			mgs[MotorID::MID].move(127);
-			mgs[MotorID::BOTTOM].move(-127);
-			mgs[MotorID::TOP].move(-127);
-		}
-
-		void handleBottomGoal()
-		{
-			// reverse spin MID and BOT
-			mgs[MotorID::BOTTOM].move(127);
-			mgs[MotorID::MID].move(127);
-		}
-
-		void handleIntake()
-		{
-			// reverse spin MID and BOT
-			mgs[MotorID::BOTTOM].move(-127);
-			mgs[MotorID::MID].move(-127);
-		}
-
-		void handleSingleMid()
-		{
-			// JUST normal spin mid
-			mgs[MotorID::MID].move(-127);
-		}
-
-		void handleStop()
-		{
-			for (pros::MotorGroup &mg : mgs)
-			{
-				mg.move(0);
-			}
-		}
-
 	private:
 	protected:
 	public:
+		// Old struct MotorID gone because we now only have 1 Unified MG
+		// and also: no more dynamic screen! Class still here but not used rn.	
+
 		struct DisperserPorts
 		{
-			//MGPorts bottom;
-			//MGPorts mid;
 			MGPorts score;
 		};
+
+		struct DisperserMechs {
+			ForkMech* ballBlocker;
+			ForkMech* descore;
+		};
+
+		pros::MotorGroup mg;
+
+		DisperserMechs mechs;
 
 		/// @brief Args for disperser object
 		/// @param abstractComponentArgs Args for AbstractComponent object
@@ -1813,50 +1686,46 @@ namespace hyper
 		{
 			AbstractComponentArgs abstractComponentArgs;
 			DisperserPorts ports;
-			DynamicScreen *dynamicScreen;
+			DisperserMechs mechs;
 		};
 
 		/// @brief Creates disperser object
 		/// @param args Args for disperser object (check args struct for more info)
 		Disperser(DisperserArgs args) : AbstractComponent(args.abstractComponentArgs),
 										// Initialize array elements with the provided port groups
-										mgs{
-											//pros::MotorGroup(args.ports.bottom),
-											//pros::MotorGroup(args.ports.mid),
-											pros::MotorGroup(args.ports.score)},
-										dynamicScreen(args.dynamicScreen) {};
+										mg(args.ports.score),
+										mechs(args.mechs) {};
 
 		void opControl() override
 		{
-			handleDynamicScreen();
-
 			if (master->get_digital(pros::E_CONTROLLER_DIGITAL_L1))
 			{
-				handleTopGoal();
+				
 			}
 			else if (master->get_digital(pros::E_CONTROLLER_DIGITAL_L2))
 			{
-				handleMidGoal();
+				
 			}
-			else if (master->get_digital(pros::E_CONTROLLER_DIGITAL_R2))
+			else if (master->get_digital_new_press(pros::E_CONTROLLER_DIGITAL_R2))
 			{
-				handleIntake();
+				
 			}
 			else if (master->get_digital(pros::E_CONTROLLER_DIGITAL_R1))
 			{
-				handleBottomGoal();
+				
 			}
 			else if (master->get_digital(pros::E_CONTROLLER_DIGITAL_A))
 			{
-				handleSingleMid();
+				
 			}
 			else
 			{
-				handleStop();
+				
 			}
 		}
 	}; // class Disperser
 
+	// Basic pneumatic fork mechanism. Flexible to a variety of similar pneumatic mechanisms.
 	class ForkMech : public AbstractMech
 	{
 	private:
@@ -1900,7 +1769,7 @@ namespace hyper
 
 		ForkMech fork;
 		ForkMech descore;
-		ForkMech ballblocker;
+		ForkMech ballBlocker;
 
 		Timer timer;
 
@@ -1935,10 +1804,10 @@ namespace hyper
 
 													  drive({args.aca, args.user.driveArgs}),
 													  screen({args.aca, args.user.screenPorts}),
-													  disp({args.aca, args.user.dispPorts, &screen}),
+													  disp({args.aca, args.user.dispPorts}),
 													  fork({{{args.aca, args.user.forkPort}}}),
 													  descore({{{args.aca, args.user.descorePort}, pros::E_CONTROLLER_DIGITAL_UP}}),
-													  ballblocker({{{args.aca, args.user.ballBlockerPort}, pros::E_CONTROLLER_DIGITAL_DOWN}}),
+													  ballBlocker({{{args.aca, args.user.ballBlockerPort}, pros::E_CONTROLLER_DIGITAL_DOWN}}),
 													  timer({args.aca})
 		{
 			// Add component pointers to vector
@@ -1949,7 +1818,7 @@ namespace hyper
 				&timer,
 				&fork,
 				&descore,
-				&ballblocker,
+				&ballBlocker,
 				&screen
 			};
 		};
