@@ -1680,6 +1680,14 @@ namespace hyper
 
 		DisperserMechs mechs;
 
+		// Whether HOLD actions are currently active and should take priority over TOGGLE actions.
+		bool holdPriority = true;
+
+		// Block the main command selection loop from running if we have the X timer active
+		bool xBlock = false;
+
+		int timer = 0;
+
 		/// @brief Args for disperser object
 		/// @param abstractComponentArgs Args for AbstractComponent object
 		struct DisperserArgs
@@ -1689,6 +1697,13 @@ namespace hyper
 			DisperserMechs mechs;
 		};
 
+		struct Command {
+			std::optional<bool> holdPriority; // true for HOLD priority, false for TOGGLE priority, nullopt for no change
+			std::optional<int> mgSpeed; // Speed to set the motor group to, nullopt for no change
+			std::optional<bool> ballBlocker; // true for block, false for unblock, nullopt for no change
+			std::optional<bool> descore; // true for descore, false for no descore, nullopt for no change
+		};
+
 		/// @brief Creates disperser object
 		/// @param args Args for disperser object (check args struct for more info)
 		Disperser(DisperserArgs args) : AbstractComponent(args.abstractComponentArgs),
@@ -1696,31 +1711,100 @@ namespace hyper
 										mg(args.ports.score),
 										mechs(args.mechs) {};
 
-		void opControl() override
-		{
-			if (master->get_digital(pros::E_CONTROLLER_DIGITAL_L1))
+		void processCmd(Command cmd) {
+			if (cmd.holdPriority.has_value()) {
+				holdPriority = cmd.holdPriority.value();
+			}
+
+			if (cmd.mgSpeed.has_value()) {
+				mg.move(cmd.mgSpeed.value());
+			}
+
+			if (cmd.ballBlocker.has_value()) {
+				mechs.ballBlocker->actuate(cmd.ballBlocker.value());
+			}
+
+			if (cmd.descore.has_value()) {
+				mechs.descore->actuate(cmd.descore.value());
+			}
+		}
+
+		void stopCmd() {
+			processCmd({.mgSpeed = 0});
+		}
+
+		void handleR2Toggle() {
+			// holdPriority should DOUBLE AS a flag for whether R2 is being toggled or not
+			// so we turn it OFF when start toggle, ON when end toggle. 
+			// and also: if a HOLD button is triggered, this INTERRUPTS the toggle and sets holdPriority to TRUE so that the toggle isnt being considered active anymore.
+			if (holdPriority) 
 			{
-				
+				// toggle START
+				processCmd({.holdPriority = false, .mgSpeed = 127, .ballBlocker = false});
+			} else {
+				// toggle END
+				processCmd({.holdPriority = true, .mgSpeed = 0});
+			}
+		}
+
+		void selectCmd() 
+		{
+			// R2: mg fwd + bb false on TOGGLE
+			
+			// R1: mg reverse + bb false on HOLD
+			// L1: mg fwd + bb true + descore false on HOLD
+			// L2: mg fwd + bb true + descore true on HOLD
+			// all HOLD should take holdPriority over TOGGLE
+			// stop on: nothing pressed AND holdPriority active - because we dont want it to stop when R2 is toggled
+
+			// do this later - only worry about HOLD/TOGGLE interactions for now
+			// X: mg reverse slow only for 1 second - then stop.
+
+			if (master->get_digital(pros::E_CONTROLLER_DIGITAL_R1))
+			{
+				processCmd({.holdPriority = true, .mgSpeed = -127, .ballBlocker = false});
 			}
 			else if (master->get_digital(pros::E_CONTROLLER_DIGITAL_L2))
 			{
-				
+				processCmd({.holdPriority = true, .mgSpeed = 127, .ballBlocker = true, .descore = true});
 			}
 			else if (master->get_digital_new_press(pros::E_CONTROLLER_DIGITAL_R2))
 			{
-				
+				handleR2Toggle();
 			}
-			else if (master->get_digital(pros::E_CONTROLLER_DIGITAL_R1))
+			else if (master->get_digital(pros::E_CONTROLLER_DIGITAL_L1))
 			{
-				
+				processCmd({.holdPriority = true, .mgSpeed = 127, .ballBlocker = true, .descore = false});
 			}
-			else if (master->get_digital(pros::E_CONTROLLER_DIGITAL_A))
+			else if (master->get_digital_new_press(pros::E_CONTROLLER_DIGITAL_X))
 			{
-				
+				processCmd({.mgSpeed = -60});
+				xBlock = true;
+				timer = 50; // roughly 1 second - 50 opcontrol cycles at ~ 25-30 ms each
 			}
-			else
+			else if (holdPriority) // Only stop if no buttons are pressed and HOLD priority is active
 			{
-				
+				stopCmd();
+			}
+		} 
+
+		void handleXTimer() {
+			if (timer <= 0) 
+			{
+				xBlock = false;
+				timer = 0;
+				return;
+			}
+
+			timer -= 1;
+		}
+
+		void opControl() override
+		{
+			if (xBlock) {
+				handleXTimer();
+			} else {
+				selectCmd();
 			}
 		}
 	}; // class Disperser
@@ -1880,7 +1964,7 @@ namespace hyper
 		void defaultLeft()
 		{
 			cm->fork.actuate(false);
-			cm->disp.handleIntake();
+			//cm->disp.handleIntake();
 
 			cm->drive.pid.lateral(16, 2);
 
@@ -1888,7 +1972,7 @@ namespace hyper
 
 			cm->drive.pid.turn(65, 2, 2500);
 			pros::lcd::print(0, "Stopping");
-			cm->disp.handleStop();
+			//cm->disp.handleStop();
 			// cm->fork.actuate(true);
 
 			pros::delay(250);
@@ -1902,16 +1986,16 @@ namespace hyper
 			pros::lcd::print(0, "TLAT End");
 			pros::delay(250);
 			cm->drive.pid.lateral(5, 3);
-			cm->disp.handleMidGoal();
+			//cm->disp.handleMidGoal();
 			pros::delay(2000);
 			cm->drive.pid.lateral(-40, 2);
 			pros::delay(500);
-			cm->disp.handleStop();
+			//cm->disp.handleStop();
 			pros::delay(500);
 			cm->drive.pid.turn(130, 2);
 			pros::delay(500);
 			cm->fork.actuate(true);
-			cm->disp.handleIntake();
+			//cm->disp.handleIntake();
 			pros::delay(500);
 			cm->drive.pid.lateral(15, 2);
 		}
@@ -1920,7 +2004,7 @@ namespace hyper
 		{
 			// Mirror of defaultLeft: invert turn angles and use bottom goal instead of mid goal
 			cm->fork.actuate(false);
-			cm->disp.handleIntake();
+			//cm->disp.handleIntake();
 
 			cm->drive.pid.lateral(23, 4);
 
@@ -1933,7 +2017,7 @@ namespace hyper
 			cm->drive.pid.turn(-70, 2, 2500); // inverted angle
 
 			pros::lcd::print(0, "Stopping");
-			cm->disp.handleStop();
+			//cm->disp.handleStop();
 
 			// was told not to deploy - just dont? alr ig :)))
 			// cm->fork.actuate(true);
@@ -1943,7 +2027,7 @@ namespace hyper
 			cm->drive.pid.lateral(10, 4, 3000);
 			pros::lcd::print(0, "TLAT End");
 
-			cm->disp.handleBottomGoal(); // bottom goal instead of mid goal
+			//cm->disp.handleBottomGoal(); // bottom goal instead of mid goal
 			pros::delay(5000);
 		}
 
@@ -1962,7 +2046,7 @@ namespace hyper
 			cm->drive.pid.turn(80, 2); // inverted angle
 
 			pros::lcd::print(0, "Stopping");
-			cm->disp.handleIntake();
+			//cm->disp.handleIntake();
 			pros::delay(700);
 			
 
@@ -1979,24 +2063,24 @@ namespace hyper
 			pros::lcd::print(0, "TLAT End");
 			cm->drive.pid.turn(175, 2,1000); // inverted angle
 			cm->fork.actuate(false);
-			cm->disp.handleStop();
+			//cm->disp.handleStop();
 											  // bottom goal instead of mid goal
 			pros::delay(500);
 			cm->drive.pid.lateral(4, 3);
 			pros::delay(500);
-			cm->disp.handleTopGoal();
+			//cm->disp.handleTopGoal();
 			pros::delay(5000);
-			cm->disp.handleStop();
+			//cm->disp.handleStop();
 			cm->drive.pid.lateral(-12, 3);
 			pros::delay(500);
 			cm->drive.pid.turn(-50, 2, 2500); // inverted angle
 			pros::delay(500);
-			cm->disp.handleIntake();
+			//cm->disp.handleIntake();
 			cm->drive.pid.lateral(40, 2);
 			pros::delay(500);
-			cm->disp.handleStop();
+			//cm->disp.handleStop();
 			pros::delay(500);
-			cm->disp.handleBottomGoal();
+			//cm->disp.handleBottomGoal();
 			pros::delay(5000);
 		}
 
@@ -2011,7 +2095,7 @@ namespace hyper
 			cm->drive.pid.lateral(23);
 			cm->drive.pid.turn(95);
 			cm->fork.actuate(false);
-			cm->disp.handleIntake();
+			//cm->disp.handleIntake();
 			cm->drive.pid.lateral(8, 4);
 
 			// Get blocks from RIGHT/0
@@ -2020,14 +2104,14 @@ namespace hyper
 			// Reverse to RIGHT/0.5, uturn towards RIGHT/1, advance towards RIGHT/1
 			cm->drive.pid.lateral(-6);
 			cm->drive.pid.uTurn();
-			cm->disp.handleStop();
+			//cm->disp.handleStop();
 			cm->fork.actuate(true);
 			cm->drive.pid.lateral(8);
 
 			// Set blocks to RIGHT/1, stop disp
-			cm->disp.handleTopGoal();
+			//cm->disp.handleTopGoal();
 			pros::delay(5000);
-			cm->disp.handleStop();
+			//cm->disp.handleStop();
 
 			// Reverse to RIGHT/0.75, turn towards MID/0.5, capture CROSS/X
 			cm->drive.pid.lateral(-5);

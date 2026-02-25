@@ -89,6 +89,8 @@
 #include <unordered_map>
 // Type indexes and IDs
 #include <typeindex>
+// Optional values
+#include <optional>
 
 // Third party includes
 
