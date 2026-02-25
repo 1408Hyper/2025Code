@@ -1712,6 +1712,8 @@ namespace hyper
 										mechs(args.mechs) {};
 
 		void processCmd(Command cmd) {
+			xBlock = false; // Any new command should unblock the X timer block
+
 			if (cmd.holdPriority.has_value()) {
 				holdPriority = cmd.holdPriority.value();
 			}
@@ -1747,6 +1749,18 @@ namespace hyper
 			}
 		}
 
+		void handleXTimer() {
+			if (timer <= 0) 
+			{
+				xBlock = false;
+				timer = 0;
+				stopCmd();
+				return;
+			}
+
+			timer -= 1;
+		}
+
 		void selectCmd() 
 		{
 			// R2: mg fwd + bb false on TOGGLE
@@ -1778,6 +1792,7 @@ namespace hyper
 			}
 			else if (master->get_digital_new_press(pros::E_CONTROLLER_DIGITAL_X))
 			{
+				// todo: EVERYTHING intterupts this
 				processCmd({.mgSpeed = -60});
 				xBlock = true;
 				timer = 50; // roughly 1 second - 50 opcontrol cycles at ~ 25-30 ms each
@@ -1786,26 +1801,17 @@ namespace hyper
 			{
 				stopCmd();
 			}
+
+			if (xBlock) 
+			{
+				handleXTimer();
+			}
 		} 
 
-		void handleXTimer() {
-			if (timer <= 0) 
-			{
-				xBlock = false;
-				timer = 0;
-				return;
-			}
-
-			timer -= 1;
-		}
 
 		void opControl() override
 		{
-			if (xBlock) {
-				handleXTimer();
-			} else {
-				selectCmd();
-			}
+			selectCmd();
 		}
 	}; // class Disperser
 
@@ -1839,6 +1845,49 @@ namespace hyper
 		}
 	}; // class ForkMech
 
+	/// @brief Class to manage opcontrol shortcuts to simplify driving (e.g. single buttons to trigger complex functions)
+	class ShortcutManager : public AbstractComponent
+	{
+		private:
+		protected:
+		public:
+			const pros::controller_analog_e_t ANALOG_CHANNELS[4] = {ANALOG_LEFT_X, ANALOG_LEFT_Y, ANALOG_RIGHT_X, ANALOG_RIGHT_Y};
+
+			int interruptThreshold = 10; // Threshold for joystick movement to detect interrupt	
+
+			// Detects whether the threshold of the joystick has been crossed to cancel a shortcut while its happening.
+			// e.g. if you decide you don't want the shortcut to run anymore: simply move the joystick and this should
+			// detect and cancel the shortcut.
+			bool detectInterrupt() {
+				for (const pros::controller_analog_e_t &channel : ANALOG_CHANNELS) {
+					const int value = master->get_analog(channel);
+					
+					if (std::fabs(value) >= interruptThreshold) {
+						return true;
+					}
+				}
+
+				return false;
+			}
+
+			/// @brief Args for shortcut manager object
+			/// @param abstractComponentArgs Args for AbstractComponent object
+			struct ShortcutManagerArgs
+			{
+				AbstractComponentArgs abstractComponentArgs;
+			};
+
+			/// @brief Creates shortcut manager object
+			/// @param args Args for shortcut manager object (check args struct for more info)
+			ShortcutManager(ShortcutManagerArgs args) : 
+				AbstractComponent(args.abstractComponentArgs) {};
+
+			void opControl() override
+			{
+				// to be implemented: shortcut functions for easy driver control
+			}
+	}; // class ShortcutManager
+
 	/// @brief Class which manages all components
 	class ComponentManager : public AbstractComponent
 	{
@@ -1856,6 +1905,8 @@ namespace hyper
 		ForkMech ballBlocker;
 
 		Timer timer;
+
+		ShortcutManager shortcuts;
 
 		// All components are stored in this vector
 		vector<AbstractComponent *> components;
@@ -1890,9 +1941,10 @@ namespace hyper
 													  screen({args.aca, args.user.screenPorts}),
 													  disp({args.aca, args.user.dispPorts}),
 													  fork({{{args.aca, args.user.forkPort}}}),
-													  descore({{{args.aca, args.user.descorePort}, pros::E_CONTROLLER_DIGITAL_UP}}),
-													  ballBlocker({{{args.aca, args.user.ballBlockerPort}, pros::E_CONTROLLER_DIGITAL_DOWN}}),
-													  timer({args.aca})
+													  descore({{{args.aca, args.user.descorePort}, pros::E_CONTROLLER_DIGITAL_DOWN}}),
+													  ballBlocker({{{args.aca, args.user.ballBlockerPort}, pros::E_CONTROLLER_DIGITAL_UP}}),
+													  timer({args.aca}),
+													  shortcuts({args.aca})
 		{
 			// Add component pointers to vector
 			// MUST BE DONE AFTER INITIALISATION not BEFORE because of pointer issues
@@ -1903,7 +1955,8 @@ namespace hyper
 				&fork,
 				&descore,
 				&ballBlocker,
-				&screen
+				&screen,
+				&shortcuts
 			};
 		};
 
@@ -2186,7 +2239,7 @@ namespace hyper
 	private:
 		void sector1()
 		{ 
-			cm->disp.handleIntake();
+			//cm->disp.handleIntake();
 			cm->drive.pid.lateral(20);
 
 			cm->fork.actuate(true);
@@ -2200,13 +2253,13 @@ namespace hyper
 		
 			cm->drive.pid.lateral(-5);
 			pros::delay(5000);
-			cm->disp.handleStop();
+			//cm->disp.handleStop();
 			pros::delay(5000);
 			cm->fork.actuate(false);
 			cm->drive.pid.uTurn();
 			pros::delay(5000);
 			cm->drive.pid.lateral(5);
-			cm->disp.handleTopGoal();
+			//cm->disp.handleTopGoal();
 		}
 
 		void sector2()
