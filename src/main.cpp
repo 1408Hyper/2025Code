@@ -1660,151 +1660,33 @@ namespace hyper
 
 	class Disperser : public AbstractComponent
 	{
-	public:
-		// Struct to index motorGroupArray
-		struct MotorID
-		{
-			const static uint8_t BOTTOM = 0;
-			const static uint8_t MID = 1;
-			const static uint8_t TOP = 2;
-		}; // struct MotorID
-
-		DynamicScreen *dynamicScreen;
-
-		// How many cycles to DELAY, how many cycles to STOP.
-		int delayCycles = 10;
-		int resetCycles = 200;
-
-		int currentCycles = 0;
-
-		// Replaced individual motor groups with an array for indexed access
-		std::array<pros::MotorGroup, 3> mgs;
-
-		/*void handleTopDetected() {
-			// if rejecting, stop mid and bot
-			mgs[MotorID::MID].move(0);
-			mgs[MotorID::BOTTOM].move(0);
-		}
-
-		void handleTopUndetected() {
-			// if not rejecting, spin mid and bot
-			mgs[MotorID::MID].move(127);
-			mgs[MotorID::BOTTOM].move(-127);
-		}*/
-
-		void handleTopDetected()
-		{
-			currentCycles++;
-		}
-
-		void handleTopUndetected()
-		{
-			currentCycles = 0;
-		}
-
-		void handleTLFallback()
-		{
-			mgs[MotorID::MID].move(127);
-			mgs[MotorID::BOTTOM].move(-127);
-		}
-
-		
-		void handleTopLower()
-		{
-			if (currentCycles >= resetCycles)
-			{
-				currentCycles = 0;
-			}
-
-			if (currentCycles <= delayCycles)
-			{
-				// if not rejecting, spin mid and bot
-				handleTLFallback();
-			}
-			else
-			{
-				// if rejecting, stop mid and bot
-				mgs[MotorID::MID].move(0);
-				mgs[MotorID::BOTTOM].move(0);
-			}
-		}
-
-		void handleDynamicScreen()
-		{
-			DynamicScreen::State state = dynamicScreen->getState();
-
-			switch (state)
-			{
-			case DynamicScreen::State::DETECTED:
-				handleTopDetected();
-				break;
-			case DynamicScreen::State::UNDETECTED:
-				handleTopUndetected();
-				break;
-			default:
-				handleTopUndetected();
-				break;
-			}
-
-			// DEBUG: print current cycles
-			pros::lcd::print(4, ("Current Cycles: " + std::to_string(currentCycles)).c_str());
-		}
-
-		void handleTopGoal()
-		{
-			// reverse spin MID and normal spin BOT and reverse spin TOP
-			mgs[MotorID::TOP].move(127);
-
-			//handleTopLower();
-
-			handleTLFallback();
-		}
-
-		void handleMidGoal()
-		{
-			// normal spin MID normal spin BOT and TOP
-			mgs[MotorID::MID].move(-127);
-			mgs[MotorID::BOTTOM].move(127);
-			mgs[MotorID::TOP].move(-127);
-		}
-
-		void handleBottomGoal()
-		{
-			// reverse spin MID and BOT
-			mgs[MotorID::BOTTOM].move(-127);
-			mgs[MotorID::MID].move(127);
-		}
-
-		void handleIntake()
-		{
-			// reverse spin MID and BOT
-			mgs[MotorID::BOTTOM].move(-127);
-			mgs[MotorID::MID].move(-127);
-		}
-
-		void handleSingleMid()
-		{
-			// JUST normal spin mid
-			mgs[MotorID::MID].move(-127);
-		}
-
-		void handleStop()
-		{
-			for (pros::MotorGroup &mg : mgs)
-			{
-				mg.move(0);
-			}
-		}
-
 	private:
 	protected:
 	public:
+		// Old struct MotorID gone because we now only have 1 Unified MG
+		// and also: no more dynamic screen! Class still here but not used rn.	
+
 		struct DisperserPorts
 		{
-			MGPorts bottom;
-			MGPorts mid;
-			MGPorts top;
+			MGPorts score;
 		};
+
+		struct DisperserMechs {
+			ForkMech* ballBlocker;
+			ForkMech* descore;
+		};
+
+		pros::MotorGroup mg;
+
+		DisperserMechs mechs;
+
+		// Whether HOLD actions are currently active and should take priority over TOGGLE actions.
+		bool holdPriority = true;
+
+		// Block the main command selection loop from running if we have the X timer active
+		bool xBlock = false;
+
+		int timer = 0;
 
 		/// @brief Args for disperser object
 		/// @param abstractComponentArgs Args for AbstractComponent object
@@ -1812,50 +1694,128 @@ namespace hyper
 		{
 			AbstractComponentArgs abstractComponentArgs;
 			DisperserPorts ports;
-			DynamicScreen *dynamicScreen;
+			DisperserMechs mechs;
+		};
+
+		struct Command {
+			std::optional<bool> holdPriority; // true for HOLD priority, false for TOGGLE priority, nullopt for no change
+			std::optional<int> mgSpeed; // Speed to set the motor group to, nullopt for no change
+			std::optional<bool> ballBlocker; // true for block, false for unblock, nullopt for no change
+			std::optional<bool> descore; // true for descore, false for no descore, nullopt for no change
 		};
 
 		/// @brief Creates disperser object
 		/// @param args Args for disperser object (check args struct for more info)
 		Disperser(DisperserArgs args) : AbstractComponent(args.abstractComponentArgs),
 										// Initialize array elements with the provided port groups
-										mgs{
-											pros::MotorGroup(args.ports.bottom),
-											pros::MotorGroup(args.ports.mid),
-											pros::MotorGroup(args.ports.top)},
-										dynamicScreen(args.dynamicScreen) {};
+										mg(args.ports.score),
+										mechs(args.mechs) {};
 
-		void opControl() override
-		{
-			handleDynamicScreen();
+		void processCmd(Command cmd) {
+			xBlock = false; // Any new command should unblock the X timer block
 
-			if (master->get_digital(pros::E_CONTROLLER_DIGITAL_L1))
+			if (cmd.holdPriority.has_value()) {
+				holdPriority = cmd.holdPriority.value();
+			}
+
+			if (cmd.mgSpeed.has_value()) {
+				mg.move(cmd.mgSpeed.value());
+			}
+
+			if (cmd.ballBlocker.has_value()) {
+				mechs.ballBlocker->actuate(cmd.ballBlocker.value());
+			}
+
+			if (cmd.descore.has_value()) {
+				mechs.descore->actuate(cmd.descore.value());
+			}
+		}
+
+		void stopCmd() {
+			processCmd({.mgSpeed = 0});
+		}
+
+		void handleR2Toggle() {
+			// holdPriority should DOUBLE AS a flag for whether R2 is being toggled or not
+			// so we turn it OFF when start toggle, ON when end toggle. 
+			// and also: if a HOLD button is triggered, this INTERRUPTS the toggle and sets holdPriority to TRUE so that the toggle isnt being considered active anymore.
+			if (holdPriority) 
 			{
-				handleTopGoal();
+				// toggle START
+				processCmd({.holdPriority = false, .mgSpeed = 127, .ballBlocker = false});
+			} else {
+				// toggle END
+				processCmd({.holdPriority = true, .mgSpeed = 0});
+			}
+		}
+
+		void handleXTimer() {
+			if (timer <= 0) 
+			{
+				xBlock = false;
+				timer = 0;
+				stopCmd();
+				return;
+			}
+
+			timer -= 1;
+		}
+
+		void selectCmd() 
+		{
+			// R2: mg fwd + bb false on TOGGLE
+			
+			// R1: mg reverse + bb false on HOLD
+			// L1: mg fwd + bb true + descore false on HOLD
+			// L2: mg fwd + bb true + descore true on HOLD
+			// all HOLD should take holdPriority over TOGGLE
+			// stop on: nothing pressed AND holdPriority active - because we dont want it to stop when R2 is toggled
+
+			// do this later - only worry about HOLD/TOGGLE interactions for now
+			// X: mg reverse slow only for 1 second - then stop.
+
+			if (master->get_digital(pros::E_CONTROLLER_DIGITAL_R1))
+			{
+				processCmd({.holdPriority = true, .mgSpeed = -127, .ballBlocker = false});
 			}
 			else if (master->get_digital(pros::E_CONTROLLER_DIGITAL_L2))
 			{
-				handleMidGoal();
+				processCmd({.holdPriority = true, .mgSpeed = 127, .ballBlocker = true, .descore = true});
 			}
-			else if (master->get_digital(pros::E_CONTROLLER_DIGITAL_R2))
+			else if (master->get_digital_new_press(pros::E_CONTROLLER_DIGITAL_R2))
 			{
-				handleIntake();
+				handleR2Toggle();
 			}
-			else if (master->get_digital(pros::E_CONTROLLER_DIGITAL_R1))
+			else if (master->get_digital(pros::E_CONTROLLER_DIGITAL_L1))
 			{
-				handleBottomGoal();
+				processCmd({.holdPriority = true, .mgSpeed = 127, .ballBlocker = true, .descore = false});
 			}
-			else if (master->get_digital(pros::E_CONTROLLER_DIGITAL_A))
+			else if (master->get_digital_new_press(pros::E_CONTROLLER_DIGITAL_X))
 			{
-				handleSingleMid();
+				// todo: EVERYTHING intterupts this
+				processCmd({.mgSpeed = -60});
+				xBlock = true;
+				timer = 50; // roughly 1 second - 50 opcontrol cycles at ~ 25-30 ms each
 			}
-			else
+			else if (holdPriority) // Only stop if no buttons are pressed and HOLD priority is active
 			{
-				handleStop();
+				stopCmd();
 			}
+
+			if (xBlock) 
+			{
+				handleXTimer();
+			}
+		} 
+
+
+		void opControl() override
+		{
+			selectCmd();
 		}
 	}; // class Disperser
 
+	// Basic pneumatic fork mechanism. Flexible to a variety of similar pneumatic mechanisms.
 	class ForkMech : public AbstractMech
 	{
 	private:
@@ -1885,6 +1845,49 @@ namespace hyper
 		}
 	}; // class ForkMech
 
+	/// @brief Class to manage opcontrol shortcuts to simplify driving (e.g. single buttons to trigger complex functions)
+	class ShortcutManager : public AbstractComponent
+	{
+		private:
+		protected:
+		public:
+			const pros::controller_analog_e_t ANALOG_CHANNELS[4] = {ANALOG_LEFT_X, ANALOG_LEFT_Y, ANALOG_RIGHT_X, ANALOG_RIGHT_Y};
+
+			int interruptThreshold = 10; // Threshold for joystick movement to detect interrupt	
+
+			// Detects whether the threshold of the joystick has been crossed to cancel a shortcut while its happening.
+			// e.g. if you decide you don't want the shortcut to run anymore: simply move the joystick and this should
+			// detect and cancel the shortcut.
+			bool detectInterrupt() {
+				for (const pros::controller_analog_e_t &channel : ANALOG_CHANNELS) {
+					const int value = master->get_analog(channel);
+					
+					if (std::fabs(value) >= interruptThreshold) {
+						return true;
+					}
+				}
+
+				return false;
+			}
+
+			/// @brief Args for shortcut manager object
+			/// @param abstractComponentArgs Args for AbstractComponent object
+			struct ShortcutManagerArgs
+			{
+				AbstractComponentArgs abstractComponentArgs;
+			};
+
+			/// @brief Creates shortcut manager object
+			/// @param args Args for shortcut manager object (check args struct for more info)
+			ShortcutManager(ShortcutManagerArgs args) : 
+				AbstractComponent(args.abstractComponentArgs) {};
+
+			void opControl() override
+			{
+				// to be implemented: shortcut functions for easy driver control
+			}
+	}; // class ShortcutManager
+
 	/// @brief Class which manages all components
 	class ComponentManager : public AbstractComponent
 	{
@@ -1899,8 +1902,11 @@ namespace hyper
 
 		ForkMech fork;
 		ForkMech descore;
+		ForkMech ballBlocker;
 
 		Timer timer;
+
+		ShortcutManager shortcuts;
 
 		// All components are stored in this vector
 		vector<AbstractComponent *> components;
@@ -1915,6 +1921,7 @@ namespace hyper
 			DynamicScreen::SensorPorts screenPorts;
 			AnalogPort forkPort;
 			AnalogPort descorePort;
+			AnalogPort ballBlockerPort;
 		};
 
 		/// @brief Args for component manager object
@@ -1932,10 +1939,12 @@ namespace hyper
 
 													  drive({args.aca, args.user.driveArgs}),
 													  screen({args.aca, args.user.screenPorts}),
-													  disp({args.aca, args.user.dispPorts, &screen}),
+													  disp({args.aca, args.user.dispPorts}),
 													  fork({{{args.aca, args.user.forkPort}}}),
-													  descore({{{args.aca, args.user.descorePort}, pros::E_CONTROLLER_DIGITAL_UP}}),
-													  timer({args.aca})
+													  descore({{{args.aca, args.user.descorePort}, pros::E_CONTROLLER_DIGITAL_DOWN}}),
+													  ballBlocker({{{args.aca, args.user.ballBlockerPort}, pros::E_CONTROLLER_DIGITAL_UP}}),
+													  timer({args.aca}),
+													  shortcuts({args.aca})
 		{
 			// Add component pointers to vector
 			// MUST BE DONE AFTER INITIALISATION not BEFORE because of pointer issues
@@ -1945,7 +1954,9 @@ namespace hyper
 				&timer,
 				&fork,
 				&descore,
-				&screen
+				&ballBlocker,
+				&screen,
+				&shortcuts
 			};
 		};
 
@@ -2006,7 +2017,7 @@ namespace hyper
 		void defaultLeft()
 		{
 			cm->fork.actuate(false);
-			cm->disp.handleIntake();
+			//cm->disp.handleIntake();
 
 			cm->drive.pid.lateral(16, 2);
 
@@ -2014,7 +2025,7 @@ namespace hyper
 
 			cm->drive.pid.turn(65, 2, 2500);
 			pros::lcd::print(0, "Stopping");
-			cm->disp.handleStop();
+			//cm->disp.handleStop();
 			// cm->fork.actuate(true);
 
 			pros::delay(250);
@@ -2028,16 +2039,16 @@ namespace hyper
 			pros::lcd::print(0, "TLAT End");
 			pros::delay(250);
 			cm->drive.pid.lateral(5, 3);
-			cm->disp.handleMidGoal();
+			//cm->disp.handleMidGoal();
 			pros::delay(2000);
 			cm->drive.pid.lateral(-40, 2);
 			pros::delay(500);
-			cm->disp.handleStop();
+			//cm->disp.handleStop();
 			pros::delay(500);
 			cm->drive.pid.turn(130, 2);
 			pros::delay(500);
 			cm->fork.actuate(true);
-			cm->disp.handleIntake();
+			//cm->disp.handleIntake();
 			pros::delay(500);
 			cm->drive.pid.lateral(15, 2);
 		}
@@ -2046,7 +2057,7 @@ namespace hyper
 		{
 			// Mirror of defaultLeft: invert turn angles and use bottom goal instead of mid goal
 			cm->fork.actuate(false);
-			cm->disp.handleIntake();
+			//cm->disp.handleIntake();
 
 			cm->drive.pid.lateral(23, 4);
 
@@ -2059,7 +2070,7 @@ namespace hyper
 			cm->drive.pid.turn(-70, 2, 2500); // inverted angle
 
 			pros::lcd::print(0, "Stopping");
-			cm->disp.handleStop();
+			//cm->disp.handleStop();
 
 			// was told not to deploy - just dont? alr ig :)))
 			// cm->fork.actuate(true);
@@ -2069,7 +2080,7 @@ namespace hyper
 			cm->drive.pid.lateral(8, 4, 3000);
 			pros::lcd::print(0, "TLAT End");
 
-			cm->disp.handleMidGoal(); // bottom goal instead of mid goal
+			//cm->disp.handleBottomGoal(); // bottom goal instead of mid goal
 			pros::delay(5000);
 		}
 
@@ -2088,7 +2099,7 @@ namespace hyper
 			cm->drive.pid.turn(80, 2); // inverted angle
 
 			pros::lcd::print(0, "Stopping");
-			cm->disp.handleIntake();
+			//cm->disp.handleIntake();
 			pros::delay(700);
 			
 
@@ -2102,24 +2113,30 @@ namespace hyper
 			cm->drive.pid.lateral(-10, 3, 1000);
 
 			
-			
-			cm->disp.handleStop();
+			pros::lcd::print(0, "TLAT End");
+			cm->drive.pid.turn(175, 2,1000); // inverted angle
+			cm->fork.actuate(false);
+			//cm->disp.handleStop();
 											  // bottom goal instead of mid goal
 			cm->drive.pid.turn(20, 2); // inverted angle
 			
 			pros::delay(500);
-			cm->disp.handleStop();
-			cm->drive.pid.lateral(-20, 2);
+			cm->drive.pid.lateral(4, 3);
+			pros::delay(500);
+			//cm->disp.handleTopGoal();
+			pros::delay(5000);
+			//cm->disp.handleStop();
+			cm->drive.pid.lateral(-12, 3);
 			pros::delay(500);
 			cm->disp.handleMidGoal();
 			cm->drive.pid.turn(-50, 2, 2500); // inverted angle
 			pros::delay(500);
-			cm->disp.handleIntake();
+			//cm->disp.handleIntake();
 			cm->drive.pid.lateral(40, 2);
 			pros::delay(500);
-			cm->disp.handleStop();
+			//cm->disp.handleStop();
 			pros::delay(500);
-			cm->disp.handleMidGoal();
+			//cm->disp.handleBottomGoal();
 			pros::delay(5000);
 		}
 
@@ -2134,7 +2151,7 @@ namespace hyper
 			cm->drive.pid.lateral(23);
 			cm->drive.pid.turn(95);
 			cm->fork.actuate(false);
-			cm->disp.handleIntake();
+			//cm->disp.handleIntake();
 			cm->drive.pid.lateral(8, 4);
 
 			// Get blocks from RIGHT/0
@@ -2143,14 +2160,14 @@ namespace hyper
 			// Reverse to RIGHT/0.5, uturn towards RIGHT/1, advance towards RIGHT/1
 			cm->drive.pid.lateral(-6);
 			cm->drive.pid.uTurn();
-			cm->disp.handleStop();
+			//cm->disp.handleStop();
 			cm->fork.actuate(true);
 			cm->drive.pid.lateral(8);
 
 			// Set blocks to RIGHT/1, stop disp
-			cm->disp.handleTopGoal();
+			//cm->disp.handleTopGoal();
 			pros::delay(5000);
-			cm->disp.handleStop();
+			//cm->disp.handleStop();
 
 			// Reverse to RIGHT/0.75, turn towards MID/0.5, capture CROSS/X
 			cm->drive.pid.lateral(-5);
@@ -2225,7 +2242,7 @@ namespace hyper
 	private:
 		void sector1()
 		{ 
-			cm->disp.handleIntake();
+			//cm->disp.handleIntake();
 			cm->drive.pid.lateral(20);
 
 			cm->fork.actuate(true);
@@ -2239,13 +2256,13 @@ namespace hyper
 		
 			cm->drive.pid.lateral(-5);
 			pros::delay(5000);
-			cm->disp.handleStop();
+			//cm->disp.handleStop();
 			pros::delay(5000);
 			cm->fork.actuate(false);
 			cm->drive.pid.uTurn();
 			pros::delay(5000);
 			cm->drive.pid.lateral(5);
-			cm->disp.handleTopGoal();
+			//cm->disp.handleTopGoal();
 		}
 
 		void sector2()
@@ -2351,13 +2368,14 @@ void initDefaultChassis()
 											   // Drivetrain args
 											   {{LEFT_DRIVE_PORTS, RIGHT_DRIVE_PORTS, IMU_PORT, LAT_ROT_DRIVE_PORT}},
 											   // Disperser ports
-											   {DISP_BOT_PORTS, DISP_MID_PORTS, DISP_TOP_PORTS},
+											   {DISP_SCORING_PORT},
 											   // Dynamic screen ports
 											   //{SCREEN_TOP_PORT},
 											   //AI Vision Sensor Port
 											   {AI_VISION_PORT},
 											   {FORK_MECH_PORT},
-											   {DESCORE_MECH_PORT}
+											   {DESCORE_MECH_PORT},
+											   {BALL_BLOCKER_MECH_PORT}
 											}}});
 
 	currentChassis = &defaultChassis;
