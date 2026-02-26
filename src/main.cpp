@@ -1829,6 +1829,7 @@ namespace hyper
 			}
 			else if (holdPriority) // Only stop if no buttons are pressed and HOLD priority is active
 			{
+				master->print(0, 0, "STOP CMD");
 				stopCmd();
 			}
 
@@ -1939,10 +1940,10 @@ namespace hyper
 
 													  drive({args.aca, args.user.driveArgs}),
 													  screen({args.aca, args.user.screenPorts}),
-													  disp({args.aca, args.user.dispPorts}),
-													  fork({{{args.aca, args.user.forkPort}}}),
+													  fork({{{args.aca, args.user.forkPort}, pros::E_CONTROLLER_DIGITAL_LEFT}}),
 													  descore({{{args.aca, args.user.descorePort}, pros::E_CONTROLLER_DIGITAL_DOWN}}),
 													  ballBlocker({{{args.aca, args.user.ballBlockerPort}, pros::E_CONTROLLER_DIGITAL_UP}}),
+													  disp({args.aca, args.user.dispPorts, {&ballBlocker, &descore}}), 
 													  timer({args.aca}),
 													  shortcuts({args.aca})
 		{

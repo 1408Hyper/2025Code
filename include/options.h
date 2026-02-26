@@ -10,9 +10,9 @@
 
 // Analog ports
 
-#define FORK_MECH_PORT 'H'
-#define DESCORE_MECH_PORT 'F'
-#define BALL_BLOCKER_MECH_PORT 'G'
+#define FORK_MECH_PORT 'G'
+#define DESCORE_MECH_PORT 'H'
+#define BALL_BLOCKER_MECH_PORT 'F'
 
 // Telemetry ports
 
@@ -38,7 +38,7 @@
 #define DISP_BOT_PORTS {11}
 #define DISP_MID_PORTS {17}
 #define DISP_TOP_PORTS {9}
-#define DISP_SCORING_PORT {9, -17}
+#define DISP_SCORING_PORT {9, -11}
 
 // Turn on/off auton and opcontrol
 #define DO_MATCH_AUTON false
