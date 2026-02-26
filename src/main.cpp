@@ -2077,7 +2077,7 @@ namespace hyper
 
 			pros::delay(250);
 			pros::lcd::print(0, "TLAT Start");
-			cm->drive.pid.lateral(8, 4, 3000);
+			cm->drive.pid.lateral(10, 4, 3000);
 			pros::lcd::print(0, "TLAT End");
 
 			//cm->disp.handleBottomGoal(); // bottom goal instead of mid goal
@@ -2118,8 +2118,6 @@ namespace hyper
 			cm->fork.actuate(false);
 			//cm->disp.handleStop();
 											  // bottom goal instead of mid goal
-			cm->drive.pid.turn(20, 2); // inverted angle
-			
 			pros::delay(500);
 			cm->drive.pid.lateral(4, 3);
 			pros::delay(500);
@@ -2128,7 +2126,6 @@ namespace hyper
 			//cm->disp.handleStop();
 			cm->drive.pid.lateral(-12, 3);
 			pros::delay(500);
-			cm->disp.handleMidGoal();
 			cm->drive.pid.turn(-50, 2, 2500); // inverted angle
 			pros::delay(500);
 			//cm->disp.handleIntake();
@@ -2220,10 +2217,10 @@ namespace hyper
 		void run() override
 		{
 			//defaultLeft();
-			defaultRight();
+			//defaultRight();
 
 			
-			//advancedAuton();
+			advancedAuton();
 
 			//ngLeft();
 			// ngRight();
