@@ -1658,6 +1658,36 @@ namespace hyper
 
 	}; // class DynamicScreen
 
+	// Basic pneumatic fork mechanism. Flexible to a variety of similar pneumatic mechanisms.
+	class ForkMech : public AbstractMech
+	{
+	private:
+		BtnManager btnMgr;
+
+	protected:
+	public:
+		/// @brief Args for fork mechanism object
+		/// @param abstractComponentArgs Args for AbstractComponent object
+		struct ForkMechArgs
+		{
+			AbstractMechArgs abstractMechArgs;
+			pros::controller_digital_e_t btn = pros::E_CONTROLLER_DIGITAL_LEFT;
+		};
+
+		/// @brief Creates fork mechanism object
+		/// @param args Args for fork mechanism object (check args struct for more info)
+		ForkMech(ForkMechArgs args) : AbstractMech(args.abstractMechArgs),
+									  btnMgr({{args.abstractMechArgs.abstractComponentArgs},
+											  {args.btn, {std::bind(&ForkMech::toggle, this)}, {}, {}}})
+		{
+		}
+
+		void opControl() override
+		{
+			btnMgr.opControl();
+		}
+	}; // class ForkMech
+
 	class Disperser : public AbstractComponent
 	{
 	private:
@@ -1814,36 +1844,6 @@ namespace hyper
 			selectCmd();
 		}
 	}; // class Disperser
-
-	// Basic pneumatic fork mechanism. Flexible to a variety of similar pneumatic mechanisms.
-	class ForkMech : public AbstractMech
-	{
-	private:
-		BtnManager btnMgr;
-
-	protected:
-	public:
-		/// @brief Args for fork mechanism object
-		/// @param abstractComponentArgs Args for AbstractComponent object
-		struct ForkMechArgs
-		{
-			AbstractMechArgs abstractMechArgs;
-			pros::controller_digital_e_t btn = pros::E_CONTROLLER_DIGITAL_LEFT;
-		};
-
-		/// @brief Creates fork mechanism object
-		/// @param args Args for fork mechanism object (check args struct for more info)
-		ForkMech(ForkMechArgs args) : AbstractMech(args.abstractMechArgs),
-									  btnMgr({{args.abstractMechArgs.abstractComponentArgs},
-											  {args.btn, {std::bind(&ForkMech::toggle, this)}, {}, {}}})
-		{
-		}
-
-		void opControl() override
-		{
-			btnMgr.opControl();
-		}
-	}; // class ForkMech
 
 	/// @brief Class to manage opcontrol shortcuts to simplify driving (e.g. single buttons to trigger complex functions)
 	class ShortcutManager : public AbstractComponent
