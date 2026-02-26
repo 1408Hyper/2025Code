@@ -17,7 +17,7 @@
 // Telemetry ports
 
 // IMU
-#define IMU_PORT 16
+#define IMU_PORT 17
 // Rotary encoder (Lateral)
 #define LAT_ROT_DRIVE_PORT 12
 // AI Vision
@@ -41,7 +41,7 @@
 #define DISP_SCORING_PORT {9, -11}
 
 // Turn on/off auton and opcontrol
-#define DO_MATCH_AUTON false
+#define DO_MATCH_AUTON true
 #define DO_SKILLS_AUTON false
 
 // Turn on for skills prep/post auton/opcontrol functions to be run on components
