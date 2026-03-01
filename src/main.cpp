@@ -1700,6 +1700,7 @@ namespace hyper
 		{
 		}
 
+	
 		void opControl() override
 		{
 			btnMgr.opControl();
@@ -1817,9 +1818,9 @@ namespace hyper
 			processCmd({.holdPriority = true, .mgSpeed = -127, .ballBlocker = false});
 		}
 
-		void handleL1()
+		void handleL1(int mgSpeed = 127)
 		{
-			processCmd({.holdPriority = true, .mgSpeed = 127, .ballBlocker = true, .descore = false});
+			processCmd({.holdPriority = true, .mgSpeed = mgSpeed, .ballBlocker = true, .descore = false});
 		}
 
 		void handleL2()
@@ -2075,10 +2076,12 @@ namespace hyper
 	private:
 		void defaultLeft()
 		{
+			cm->descore.actuate(true);
+
 			cm->fork.actuate(false);
 			cm->disp.handleR2();
 
-			cm->drive.pid.lateral(27, 3);
+			cm->drive.pid.lateral(25, 3);
 
 			pros::delay(1000);
 
@@ -2097,10 +2100,10 @@ namespace hyper
 
 			pros::lcd::print(0, "TLAT End");
 			pros::delay(250);
-			cm->drive.pid.lateral(-15, 3);
+			cm->drive.pid.lateral(-20, 3);
 			cm->disp.handleR1();
-			pros::delay(1000);
-			cm->disp.handleL1();
+			pros::delay(500);
+			cm->disp.handleL1(80);
 			pros::delay(5000);
 		}
 
@@ -2111,7 +2114,7 @@ namespace hyper
 			cm->fork.actuate(true);
 			//cm->disp.handleIntake();
 
-			cm->drive.pid.lateral(23, 2);
+			cm->drive.pid.lateral(20, 2);
 
 			
 
@@ -2136,10 +2139,10 @@ namespace hyper
 			pros::delay(1500);
 			cm->drive.pid.lateral(-15, 2);
 			cm->drive.pid.turn(15, 2); // inverted angle
-			cm->drive.pid.lateral(-20, 2);
+			cm->drive.pid.lateral(-25, 2);
 			pros::delay(500);
 			cm->disp.handleR1();
-			pros::delay(700);
+			pros::delay(50);
 			cm->disp.handleL1();
 			pros::delay(5000);
 		}
