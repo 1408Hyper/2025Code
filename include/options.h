@@ -10,16 +10,18 @@
 
 // Analog ports
 
-#define FORK_MECH_PORT 'H'
+#define FORK_MECH_PORT 'G'
+#define DESCORE_MECH_PORT 'H'
+#define BALL_BLOCKER_MECH_PORT 'F'
 
 // Telemetry ports
 
 // IMU
-#define IMU_PORT 16
+#define IMU_PORT 17
 // Rotary encoder (Lateral)
 #define LAT_ROT_DRIVE_PORT 12
 // AI Vision
-#define AI_VISION_PORT 3
+#define AI_VISION_PORT 6
 // GPS Port
 #define GPS_PORT 4
 
@@ -36,6 +38,7 @@
 #define DISP_BOT_PORTS {11}
 #define DISP_MID_PORTS {17}
 #define DISP_TOP_PORTS {9}
+#define DISP_SCORING_PORT {9, -11}
 
 // Turn on/off auton and opcontrol
 #define DO_MATCH_AUTON true

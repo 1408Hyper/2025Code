@@ -1,7 +1,7 @@
 {
   "py/object": "pros.conductor.project.Project",
   "py/state": {
-    "project_name": "LeftMatchATAC25",
+    "project_name": "right",
     "target": "v5",
     "templates": {
       "kernel": {
@@ -256,7 +256,7 @@
     },
     "upload_options": {
       "description": "1408H 2025 Season Code",
-      "icon": "X",
+      "icon": "pros",
       "slot": 1
     },
     "use_early_access": false

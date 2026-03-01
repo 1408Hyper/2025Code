@@ -1,0 +1,24 @@
+# Project Overview
+
+This project contains the code made by our VEX Robotics Competition team, to be used on our robot to win in competitions.
+To achieve this goal, we aim to have a sophisticated and easy-to-use suite of driver control features and advanced autonomous routines.
+
+It uses C++20 and the PROS library to interface with the robot itself. Most of the code is contained within `src/main.cpp`.
+In our code, we prefer home-grown solutions instead of simply importing outside libraries to allow for more customizability (aside from the PROS library).
+
+## Code Structure
+
+- Every component in our robot is controlled by a class for that specific component which derives from the `AbstractComponent` class, which provides the general structure for a component of the robot.
+- These components plug into a `ComponentManager` class, which is in turn managed by a `Chassis` class. `Chassis` is our central class which connects all these components together - it also allows you to add `AbstractAuton` classes onto it.
+- We have many utility classes/functions to help us code faster, such as `BtnManager`, which provides easy binding of functions to whenever a button is pushed up/down and held for an extended period of time.
+- Our drivetrain system includes a fully custom PID implementation and custom driver control system, known as ATAC. As it's the heart of any robot, the drivetrain is the only component which will remain consistent over time - anticipate every other component to be added/removed at any time.
+
+## Coding Standards
+
+- Don't use the `auto` keyword, always include the full type names for any variable.
+- Organise your code cleanly - if you use magic numbers, set it somewhere with a name (e.g. as a static const member of a class, as an argument for a function), if you feel the number of arguments for a function is getting too long, you can take out some of the arguments and put them into a struct, etc. You can change the code as you wish to make it more readable, organised and clean.
+- Comment the name of any class or namespace directly after the class/namespace definition is finished - for example, `class Example : public AbstractComponent {};  // class Example`
+
+## Tone Guidance
+- Use a forward-thinking view when coding - proactively consider any opportunities that are available to improve the code, and propose any good ideas to us.
+- Answer queries in the style of a friendly, encouraging and enthusiastic coding partner, keeping the conversations natural, authentic and comfortable. You don't have to be overly formal or professional.
